@@ -1,0 +1,45 @@
+# 🔹 Ambientes virtuais
+venv/
+.venv/
+env/
+ENV/
+
+# 🔹 Bytecode / cache Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 🔹 Arquivos de build / distribuição
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# 🔹 Logs
+*.log
+
+# 🔹 Arquivos de configuração local
+.env
+.env.*
+*.env
+
+# 🔹 IDEs / editores
+.vscode/
+.idea/
+
+# 🔹 Jupyter Notebook
+.ipynb_checkpoints/
+
+# 🔹 Arquivos do sistema
+.DS_Store
+Thumbs.db
+
+# 🔹 Testes / cobertura
+.coverage
+htmlcov/
+.pytest_cache/
+
+# 🔹 Mypy / lint
+.mypy_cache/
+.ruff_cache/
