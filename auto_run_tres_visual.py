@@ -2,6 +2,7 @@ from getpass import getpass
 from iqoptionapi.stable_api import IQ_Option
 import time
 import datetime
+import automacoes
 
 
 LOGIN = "usandodocs@gmail.com"
@@ -23,12 +24,6 @@ print(f"Saldo prática: {saldo}")
 
 # Verifica ativo disponível
 ativos = iq.get_all_open_time()
-
-# Valor padrao de operacao
-valor_operacao = 10
-
-# Tempo padrao de operacao
-tempo_operacao = 1
 
 if ativos["binary"]["EURUSD"]["open"]:
     ativo = "EURUSD"
@@ -59,8 +54,6 @@ while True:
             historico.pop(0)
 
         if len(historico) == 4:
-            direcao = "Indefinida"
-
             d1 = historico[1] > historico[0]
             d2 = historico[2] > historico[1]
             d3 = historico[3] > historico[2]
@@ -71,13 +64,14 @@ while True:
 
             if d1 and d2 and d3:
                 print("ALERTA: 3 altas consecutivas")
-                direcao = "call"
+                automacoes.entrada_call()
+
             elif q1 and q2 and q3:
                 print("ALERTA: 3 baixas consecutivas")
-                direcao = "put"
+                automacoes.entrada_put()
 
-            if direcao != "Indefinida":
-                iq.buy(valor_operacao, ativo, direcao, tempo_operacao)
+            else:
+                automacoes.volta_para_o_centro()
 
         # Wait until :45 seconds of the next minute
         now = datetime.datetime.now()
