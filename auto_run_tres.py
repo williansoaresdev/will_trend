@@ -1,6 +1,9 @@
 from getpass import getpass
 from iqoptionapi.stable_api import IQ_Option
 import time
+import datetime
+import automacoes
+
 
 LOGIN = "usandodocs@gmail.com"
 
@@ -61,12 +64,27 @@ while True:
 
             if d1 and d2 and d3:
                 print("ALERTA: 3 altas consecutivas")
+                automacoes.entrada_call()
 
             elif q1 and q2 and q3:
                 print("ALERTA: 3 baixas consecutivas")
+                automacoes.entrada_put()
 
-        time.sleep(60)
+            else:
+                automacoes.volta_para_o_centro()
+
+        # Wait until :45 seconds of the next minute
+        now = datetime.datetime.now()
+        seconds_until_45 = (45 - now.second) % 60
+        if seconds_until_45 == 0:
+            seconds_until_45 = 60
+        time.sleep(seconds_until_45)
 
     except Exception as e:
         print("Erro:", e)
-        time.sleep(60)
+        # Wait until :45 seconds of the next minute
+        now = datetime.datetime.now()
+        seconds_until_45 = (45 - now.second) % 60
+        if seconds_until_45 == 0:
+            seconds_until_45 = 60
+        time.sleep(seconds_until_45)
