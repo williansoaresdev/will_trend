@@ -30,6 +30,9 @@ valor_operacao = 10
 # Tempo padrao de operacao
 tempo_operacao = 1
 
+# Segundos para analisar e entrar
+segundos_analise = 50
+
 if ativos["binary"]["EURUSD"]["open"]:
     ativo = "EURUSD"
 elif ativos["binary"]["EURUSD-OTC"]["open"]:
@@ -79,18 +82,18 @@ while True:
             if direcao != "Indefinida":
                 iq.buy(valor_operacao, ativo, direcao, tempo_operacao)
 
-        # Wait until :45 seconds of the next minute
+        # Wait until some seconds of the next minute
         now = datetime.datetime.now()
-        seconds_until_45 = (45 - now.second) % 60
-        if seconds_until_45 == 0:
-            seconds_until_45 = 60
-        time.sleep(seconds_until_45)
+        seconds_until = (segundos_analise - now.second) % 60
+        if seconds_until == 0:
+            seconds_until = 60
+        time.sleep(seconds_until)
 
     except Exception as e:
         print("Erro:", e)
-        # Wait until :45 seconds of the next minute
+        # Wait until some seconds of the next minute
         now = datetime.datetime.now()
-        seconds_until_45 = (45 - now.second) % 60
-        if seconds_until_45 == 0:
-            seconds_until_45 = 60
-        time.sleep(seconds_until_45)
+        seconds_until = (segundos_analise - now.second) % 60
+        if seconds_until == 0:
+            seconds_until = 60
+        time.sleep(seconds_until)
