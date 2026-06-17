@@ -16,10 +16,10 @@ if not ok:
     print("Erro:", motivo)
     exit()
 
-iq.change_balance("PRACTICE")
+iq.change_balance("REAL")
 
 saldo = iq.get_balance()
-print(f"Saldo prática: {saldo}")
+print(f"Saldo real: {saldo}")
 
 stop_loss = saldo * 0.9
 
