@@ -40,7 +40,8 @@ direcao = "Indefinida"
 
 # Conta as vitorias
 qtd_vitorias = 0
-meta_vitorias = 10
+qtd_derrotas = 0
+meta_vitorias = 5
 
 if ativos["binary"]["EURUSD"]["open"]:
     ativo = "EURUSD"
@@ -56,6 +57,8 @@ historico = []
 
 while True:
     try:
+        processa_entrada = True
+
         vela = iq.get_candles(
             ativo,
             60,
@@ -74,25 +77,32 @@ while True:
         print(f"{alerta_hora} {fechamento:.5f}")
 
         if len(historico) == 4:
-            # Ajuste e análise de Saldo
+            # Se veio de uma operação anterior, faz a análise de vitória ou derrota
             if direcao != "Indefinida":
+                processa_entrada = False # Não processa nova entrada logo após uma operação, só analisa a anterior
+
                 saldo_antes = saldo
                 saldo = iq.get_balance()
                 if saldo > saldo_antes:
-                    print(f"## OPERAÇÃO VENCEDORA! Saldo antes: {saldo_antes:.2f}, Saldo depois: {saldo:.2f}")
                     valor_operacao = 2
                     qtd_vitorias += 1
+                    print(f"## OPERAÇÃO VENCEDORA [{qtd_vitorias}x{qtd_derrotas}] Saldo antes: {saldo_antes:.2f}, Saldo depois: {saldo:.2f}")
                 else:
-                    print(f"## OPERAÇÃO PERDEDORA! Saldo antes: {saldo_antes:.2f}, Saldo depois: {saldo:.2f}")
-                    if valor_operacao == 16:
+                    qtd_derrotas += 1
+                    if valor_operacao == 2:
+                        valor_operacao = 2.40                       
+                    elif valor_operacao == 2.40:
+                        valor_operacao = 5.18
+                    elif valor_operacao == 5.18:
+                        valor_operacao = 11.28
+                    elif valor_operacao == 11.28:
                         valor_operacao = 2
-                    else:
-                        valor_operacao *= 2
+                    print(f"## OPERAÇÃO PERDEDORA [{qtd_vitorias}x{qtd_derrotas}] Saldo antes: {saldo_antes:.2f}, Saldo depois: {saldo:.2f}")
 
                 if saldo <= stop_loss:
                     print(f"## STOP LOSS ATINGIDO! Saldo atual: {saldo:.2f}, Stop Loss: {stop_loss:.2f}")
                     exit()
-                
+
                 if qtd_vitorias >= meta_vitorias:
                     print(f"## META DE VITÓRIAS ATINGIDA! Vitorias: {qtd_vitorias}, Saldo atual: {saldo:.2f}")
                     exit()
@@ -107,20 +117,21 @@ while True:
 
             delta3_ideal = delta2 * 1.25
 
-            if delta2 > 0.0003 and delta3 > 0.0005:
-                if engolfo_alta or engolfo_baixa:
-                    ultimos_tres = historico[-3:]
-                    ultimos_tres_formatados = ", ".join(f"{valor:.5f}" for valor in ultimos_tres)
+            if processa_entrada:
+                if delta2 > 0.0003 and delta3 > 0.0005:
+                    if engolfo_alta or engolfo_baixa:
+                        ultimos_tres = historico[-3:]
+                        ultimos_tres_formatados = ", ".join(f"{valor:.5f}" for valor in ultimos_tres)
 
-                    if engolfo_alta:
-                        print(f"ALERTA: Engolfo de alta - Fechamentos últimos 3 candles: {ultimos_tres_formatados}")
-                        direcao = "call"
-                    elif engolfo_baixa:
-                        print(f"ALERTA: Engolfo de baixa - Fechamentos últimos 3 candles: {ultimos_tres_formatados}")
-                        direcao = "put"
+                        if engolfo_alta:
+                            print(f"ALERTA: Engolfo de alta - Fechamentos últimos 3 candles: {ultimos_tres_formatados}")
+                            direcao = "call"
+                        elif engolfo_baixa:
+                            print(f"ALERTA: Engolfo de baixa - Fechamentos últimos 3 candles: {ultimos_tres_formatados}")
+                            direcao = "put"
 
-            if direcao != "Indefinida":
-                iq.buy(valor_operacao, ativo, direcao, tempo_operacao)
+                if direcao != "Indefinida":
+                    iq.buy(valor_operacao, ativo, direcao, tempo_operacao)
 
         # Wait until some seconds of the next minute
         now = datetime.datetime.now()
