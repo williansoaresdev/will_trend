@@ -8,6 +8,8 @@ LOGIN = "usandodocs@gmail.com"
 
 senha = getpass("Senha: ")
 
+print(f"Logando na IQ como {LOGIN}")
+
 iq = IQ_Option(LOGIN, senha)
 
 ok, motivo = iq.connect()
@@ -16,18 +18,42 @@ if not ok:
     print("Erro:", motivo)
     exit()
 
-iq.change_balance("PRACTICE")
+while True:
+    print("Escolha a conta:")
+    print("1 - Conta de prática")
+    print("2 - Conta Real")
+    opcao_conta = input("Opção: ").strip()
+
+    if opcao_conta == "1":
+        conta_selecionada = "PRACTICE"
+        print("Usando conta de prática...")
+        break
+    elif opcao_conta == "2":
+        conta_selecionada = "REAL"
+        print("Usando conta real...")
+        break
+    else:
+        print("Opção inválida. Digite 1 ou 2.")
+
+print("Login OK - alterando para a conta selecionada...")
+
+iq.change_balance(conta_selecionada)
 
 saldo = iq.get_balance()
-print(f"Saldo prática: {saldo}")
-
-stop_loss = saldo * 0.9
+if conta_selecionada == "PRACTICE":
+    print(f"Saldo prática: {saldo}")
+else:
+    print(f"Saldo real: {saldo}")
 
 # Verifica ativo disponível
-ativos = iq.get_all_open_time()
+ativo = "EURUSD-OTC"
 
 # Valor padrao de operacao
 valor_operacao = 2
+
+# Stop Loss e Stop Gain
+stop_loss = saldo * 0.9
+stop_gain = saldo * 1.1
 
 # Tempo padrao de operacao
 tempo_operacao = 1
@@ -40,15 +66,10 @@ direcao = "Indefinida"
 
 # Conta as vitorias
 qtd_vitorias = 0
-meta_vitorias = 10
+qtd_derrotas = 0
 
-if ativos["binary"]["EURUSD"]["open"]:
-    ativo = "EURUSD"
-elif ativos["binary"]["EURUSD-OTC"]["open"]:
-    ativo = "EURUSD-OTC"
-else:
-    print("Nenhum ativo disponível.")
-    exit()
+# Para controle das entradas
+check, order_id = False, 0
 
 print("Monitorando:", ativo)
 
@@ -56,6 +77,9 @@ historico = []
 
 while True:
     try:
+        processa_entrada = True
+
+        #print("Lendo último candle")
         vela = iq.get_candles(
             ativo,
             60,
@@ -74,27 +98,35 @@ while True:
         print(f"{alerta_hora} {fechamento:.5f}")
 
         if len(historico) == 4:
-            # Ajuste e análise de Saldo
+            # Se veio de uma operação anterior, faz a análise de vitória ou derrota
             if direcao != "Indefinida":
+                processa_entrada = False # Não processa nova entrada logo após uma operação, só analisa a anterior
+
                 saldo_antes = saldo
                 saldo = iq.get_balance()
-                if saldo > saldo_antes:
-                    print(f"## OPERAÇÃO VENCEDORA! Saldo antes: {saldo_antes:.2f}, Saldo depois: {saldo:.2f}")
-                    valor_operacao = 2
-                    qtd_vitorias += 1
-                else:
-                    print(f"## OPERAÇÃO PERDEDORA! Saldo antes: {saldo_antes:.2f}, Saldo depois: {saldo:.2f}")
-                    if valor_operacao == 16:
+                profit = saldo - saldo_antes
+                print(f"Resultado: {profit}")
+
+                if profit > 0:
+                    if valor_operacao == 2:
+                        valor_operacao = 3.72
+                    elif valor_operacao == 3.72:
+                        valor_operacao = 6.90
+                    elif valor_operacao == 6.90:
                         valor_operacao = 2
-                    else:
-                        valor_operacao *= 2
+                    qtd_vitorias += 1
+                    print(f"## OPERAÇÃO VENCEDORA [{qtd_vitorias}x{qtd_derrotas}] Saldo antes: {saldo_antes:.2f}, Saldo depois: {saldo:.2f}")
+                elif profit < 0:
+                    qtd_derrotas += 1
+                    valor_operacao = 2
+                    print(f"## OPERAÇÃO PERDEDORA [{qtd_vitorias}x{qtd_derrotas}] Saldo antes: {saldo_antes:.2f}, Saldo depois: {saldo:.2f}")
 
                 if saldo <= stop_loss:
                     print(f"## STOP LOSS ATINGIDO! Saldo atual: {saldo:.2f}, Stop Loss: {stop_loss:.2f}")
                     exit()
-                
-                if qtd_vitorias >= meta_vitorias:
-                    print(f"## META DE VITÓRIAS ATINGIDA! Vitorias: {qtd_vitorias}, Saldo atual: {saldo:.2f}")
+                    
+                if saldo >= stop_gain:
+                    print(f"## STOP GAIN ATINGIDO! Saldo atual: {saldo:.2f}, Stop Gain: {stop_gain:.2f}")
                     exit()
 
             direcao = "Indefinida"
@@ -107,20 +139,23 @@ while True:
 
             delta3_ideal = delta2 * 1.25
 
-            if delta2 > 0.0003 and delta3 > 0.0005:
-                if engolfo_alta or engolfo_baixa:
-                    ultimos_tres = historico[-3:]
-                    ultimos_tres_formatados = ", ".join(f"{valor:.5f}" for valor in ultimos_tres)
+            if processa_entrada:
+                if delta2 >= 0.0003 and delta3 >= delta3_ideal:
+                    if engolfo_alta or engolfo_baixa:
+                        ultimos_tres = historico[-3:]
+                        ultimos_tres_formatados = ", ".join(f"{valor:.5f}" for valor in ultimos_tres)
 
-                    if engolfo_alta:
-                        print(f"ALERTA: Engolfo de alta - Fechamentos últimos 3 candles: {ultimos_tres_formatados}")
-                        direcao = "call"
-                    elif engolfo_baixa:
-                        print(f"ALERTA: Engolfo de baixa - Fechamentos últimos 3 candles: {ultimos_tres_formatados}")
-                        direcao = "put"
+                        if engolfo_alta:
+                            print(f"ALERTA: Engolfo de alta - Fechamentos últimos 3 candles: {ultimos_tres_formatados}")
+                            direcao = "call"
+                        elif engolfo_baixa:
+                            print(f"ALERTA: Engolfo de baixa - Fechamentos últimos 3 candles: {ultimos_tres_formatados}")
+                            direcao = "put"
 
-            if direcao != "Indefinida":
-                iq.buy(valor_operacao, ativo, direcao, tempo_operacao)
+                if direcao != "Indefinida":
+                    check, order_id = iq.buy(valor_operacao, ativo, direcao, tempo_operacao)
+                    if check:
+                        print(f"Ordem inserida! ID: {order_id}")
 
         # Wait until some seconds of the next minute
         now = datetime.datetime.now()
