@@ -91,13 +91,13 @@ while True:
 
         historico.append(fechamento)
 
-        if len(historico) > 4:
+        if len(historico) > 9:
             historico.pop(0)
 
         alerta_hora = datetime.datetime.now().strftime("%H:%M:%S")
         print(f"{alerta_hora} {fechamento:.5f}")
 
-        if len(historico) == 4:
+        if len(historico) >= 9:
             # Se veio de uma operação anterior, faz a análise de vitória ou derrota
             if direcao != "Indefinida":
                 processa_entrada = False # Não processa nova entrada logo após uma operação, só analisa a anterior
@@ -115,10 +115,14 @@ while True:
                     elif valor_operacao == 6.90:
                         valor_operacao = 2
                     qtd_vitorias += 1
+                    with open("historico.txt", "a", encoding="utf-8") as arquivo_historico:
+                        arquivo_historico.write("Gain\n")
                     print(f"## OPERAÇÃO VENCEDORA [{qtd_vitorias}x{qtd_derrotas}] Saldo antes: {saldo_antes:.2f}, Saldo depois: {saldo:.2f}")
                 elif profit < 0:
                     qtd_derrotas += 1
                     valor_operacao = 2
+                    with open("historico.txt", "a", encoding="utf-8") as arquivo_historico:
+                        arquivo_historico.write("Loss\n")
                     print(f"## OPERAÇÃO PERDEDORA [{qtd_vitorias}x{qtd_derrotas}] Saldo antes: {saldo_antes:.2f}, Saldo depois: {saldo:.2f}")
 
                 if saldo <= stop_loss:
@@ -131,11 +135,25 @@ while True:
 
             direcao = "Indefinida"
 
-            engolfo_alta = historico[2] < historico[1] and historico[3] > historico[2] and historico[3] > historico[1]
-            engolfo_baixa = historico[2] > historico[1] and historico[3] < historico[2] and historico[3] < historico[1]
+            ultimos_quatro = historico[-4:]
+            preco_atual = ultimos_quatro[-1]
+            media_movel = sum(historico[-9:]) / 9
 
-            delta3 = abs(historico[3] - historico[2]) # ultimo candle
-            delta2 = abs(historico[2] - historico[1]) # penultimo candle
+            engolfo_alta = (
+                ultimos_quatro[2] < ultimos_quatro[1]
+                and ultimos_quatro[3] > ultimos_quatro[2]
+                and ultimos_quatro[3] > ultimos_quatro[1]
+                and preco_atual > media_movel
+            )
+            engolfo_baixa = (
+                ultimos_quatro[2] > ultimos_quatro[1]
+                and ultimos_quatro[3] < ultimos_quatro[2]
+                and ultimos_quatro[3] < ultimos_quatro[1]
+                and preco_atual < media_movel
+            )
+
+            delta3 = abs(ultimos_quatro[3] - ultimos_quatro[2]) # ultimo candle
+            delta2 = abs(ultimos_quatro[2] - ultimos_quatro[1]) # penultimo candle
 
             delta3_ideal = delta2 * 1.25
 
