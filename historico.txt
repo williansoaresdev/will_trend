@@ -20,3 +20,9 @@ Loss
 Loss
 Loss
 Gain
+Gain
+Loss
+Loss
+Gain
+Gain
+Gain
