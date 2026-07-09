@@ -1,11 +1,27 @@
+'''
+    Executor de ordens IQOption
+    -> Media Móvel 9 fechamentos
+    -> Engolfo em direção a tendência da média
+    -> Entrada de 1 min
+    -> 1 Soro
+    -> 4 Gales
+'''
+
+# Para pedir a senha no console
 from getpass import getpass
+
+# Para usar a API da IQOption
 from iqoptionapi.stable_api import IQ_Option
+
+# Rotinas de data e hora
 import time
 import datetime
 
 
+# Meu email de login
 LOGIN = "usandodocs@gmail.com"
 
+# Pede a senha
 senha = getpass("Senha: ")
 
 print(f"Logando na IQ como {LOGIN}")
@@ -14,9 +30,11 @@ iq = IQ_Option(LOGIN, senha)
 
 ok, motivo = iq.connect()
 
+# Se o login falhar:
 if not ok:
     print("Erro:", motivo)
     exit()
+
 
 while True:
     print("Escolha a conta:")
@@ -49,7 +67,19 @@ else:
 ativo = "EURUSD-OTC"
 
 # Valor padrao de operacao
-valor_operacao = 2
+entrada_padrao = 2
+valor_operacao = entrada_padrao
+
+# Taxa padrão de profit mínimo
+taxa_profit = 0.86
+
+# Maximo de Soro
+max_soro = 4
+
+# Soma das percas (para o gale)
+soma_percas = 0
+qtd_percas = 0
+max_gales = 4
 
 # Stop Loss e Stop Gain
 stop_loss = saldo * 0.9
@@ -75,6 +105,7 @@ print("Monitorando:", ativo)
 
 historico = []
 
+# Roda a cada minuto até que caia no stop loss ou stop gain
 while True:
     try:
         processa_entrada = True
@@ -107,22 +138,43 @@ while True:
                 profit = saldo - saldo_antes
                 print(f"Resultado: {profit}")
 
+                # Processa vitórias
                 if profit > 0:
-                    if valor_operacao == 2:
-                        valor_operacao = 3.72
-                    elif valor_operacao == 3.72:
-                        valor_operacao = 6.90
-                    elif valor_operacao == 6.90:
-                        valor_operacao = 2
+                    # Se veio de uma derrota anterior (primeira vitoria), reinicia com a entrada padrao daqui pra frente
+                    if qtd_percas > 0:
+                        valor_operacao = entrada_padrao
+                    
+                    valor_operacao = valor_operacao * round(1 + taxa_profit, 2)
+                    if valor_operacao > max_soro:
+                        valor_operacao = entrada_padrao
+
                     qtd_vitorias += 1
+                    soma_percas = 0
+                    qtd_percas = 0
+
                     with open("historico.txt", "a", encoding="utf-8") as arquivo_historico:
                         arquivo_historico.write("Gain\n")
+
                     print(f"## OPERAÇÃO VENCEDORA [{qtd_vitorias}x{qtd_derrotas}] Saldo antes: {saldo_antes:.2f}, Saldo depois: {saldo:.2f}")
+                    
+                # Processa derrotas
                 elif profit < 0:
+                    # Se é a primeira derrota, considera para os calculos de gale a entrada padrao
+                    if qtd_percas == 0:
+                        valor_operacao = entrada_padrao
+                    
                     qtd_derrotas += 1
-                    valor_operacao = 2
+                    soma_percas += valor_operacao
+                    qtd_percas += 1
+
+                    valor_operacao = round(soma_percas / taxa_profit, 2)
+                    
+                    if qtd_percas > max_gales:
+                        valor_operacao = entrada_padrao
+
                     with open("historico.txt", "a", encoding="utf-8") as arquivo_historico:
                         arquivo_historico.write("Loss\n")
+
                     print(f"## OPERAÇÃO PERDEDORA [{qtd_vitorias}x{qtd_derrotas}] Saldo antes: {saldo_antes:.2f}, Saldo depois: {saldo:.2f}")
 
                 if saldo <= stop_loss:

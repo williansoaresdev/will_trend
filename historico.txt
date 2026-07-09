@@ -26,3 +26,8 @@ Loss
 Gain
 Gain
 Gain
+Loss
+Gain
+Gain
+Loss
+Gain
