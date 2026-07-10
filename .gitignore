@@ -34,7 +34,7 @@ dist/
 # 🔹 Arquivos do sistema
 .DS_Store
 Thumbs.db
-historico.txt
+*.txt
 
 # 🔹 Testes / cobertura
 .coverage

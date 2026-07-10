@@ -31,3 +31,10 @@ Gain
 Gain
 Loss
 Gain
+Loss
+Gain
+Gain
+Gain
+Loss
+Gain
+Gain
