@@ -73,7 +73,7 @@ valor_operacao = entrada_padrao
 # Taxa padrão de profit mínimo
 taxa_profit = 0.86
 
-# Maximo de Soro
+# Maximo de Soro (valor de entrada) e Gales (quantidade de perdas consecutivas)
 max_soro = 4
 
 # Soma das percas (para o gale)

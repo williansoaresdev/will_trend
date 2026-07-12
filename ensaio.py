@@ -6,7 +6,7 @@ arquivo = Path(__file__).with_name("historico.txt")
 entrada_inicial = 2
 profit = 0.85
 saldo_inicial = 100
-max_soro = 4
+max_soro = 6
 max_gale = 16
 
 saldo_final = saldo_inicial
@@ -39,10 +39,12 @@ with arquivo.open("r", encoding="utf-8") as f:
                 if entrada > max_soro:
                     entrada = entrada_inicial
 
+        entrada = round(entrada, 2)
+
         lucro = 0
         if resultado == "Gain":
             soma_loss = 0
-            lucro = entrada * profit
+            lucro = round(entrada * profit, 2)
             qtd_loss = 0
         elif resultado == "Loss":
             lucro = -entrada
@@ -51,7 +53,7 @@ with arquivo.open("r", encoding="utf-8") as f:
 
         saldo_final += lucro
 
-        print("Ent: {:<6} | Res: {:<5} | Lucro: {:<6} | Saldo: {:<6}".format(entrada, resultado, lucro, saldo_final))
+        print("Ent: {:<6} | Res: {:<5} | Lucro: {:<6} | Saldo: {:<6}".format(entrada, resultado, lucro, round(saldo_final, 2)))
 
         resultado_anterior = resultado
         primeira_linha = False
