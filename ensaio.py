@@ -6,8 +6,8 @@ arquivo = Path(__file__).with_name("historico.txt")
 entrada_inicial = 2
 profit = 0.85
 saldo_inicial = 100
-max_soro = 6
-max_gale = 16
+max_soro = entrada_inicial * (1 + profit) + 1
+max_gale = entrada_inicial * 8
 
 saldo_final = saldo_inicial
 primeira_linha = True
