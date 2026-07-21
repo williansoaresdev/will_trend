@@ -17,6 +17,21 @@ from iqoptionapi.stable_api import IQ_Option
 import time
 import datetime
 
+# Para enviar notificações ao Slack
+import requests
+
+# Webhook do Slack
+SLACK_WEBHOOK = "https://hooks.slack.com/services/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"
+
+
+def send_slack_notification(mensagem):
+    """Envia uma notificação para o Slack via webhook"""
+    try:
+        payload = {"text": mensagem}
+        requests.post(SLACK_WEBHOOK, json=payload)
+    except Exception as e:
+        print(f"Erro ao enviar notificação ao Slack: {e}")
+
 
 # Meu email de login
 LOGIN = "usandodocs@gmail.com"
@@ -178,11 +193,15 @@ while True:
                     print(f"## OPERAÇÃO PERDEDORA [{qtd_vitorias}x{qtd_derrotas}] Saldo antes: {saldo_antes:.2f}, Saldo depois: {saldo:.2f}")
 
                 if saldo <= stop_loss:
-                    print(f"## STOP LOSS ATINGIDO! Saldo atual: {saldo:.2f}, Stop Loss: {stop_loss:.2f}")
+                    mensagem = f"## STOP LOSS ATINGIDO! Saldo atual: {saldo:.2f}, Stop Loss: {stop_loss:.2f}"
+                    print(mensagem)
+                    send_slack_notification(mensagem)
                     exit()
                     
                 if saldo >= stop_gain:
-                    print(f"## STOP GAIN ATINGIDO! Saldo atual: {saldo:.2f}, Stop Gain: {stop_gain:.2f}")
+                    mensagem = f"## STOP GAIN ATINGIDO! Saldo atual: {saldo:.2f}, Stop Gain: {stop_gain:.2f}"
+                    print(mensagem)
+                    send_slack_notification(mensagem)
                     exit()
 
             direcao = "Indefinida"

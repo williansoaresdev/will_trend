@@ -225,9 +225,9 @@ while True:
                     qtd_baixas += 1           
            
             # 1 - Estar acima da média, 2 - Estar acima do último fechamento, 3 - A maioria dos ultimos candles forem de alta
-            if preco_atual > media_movel and qtd_altas > 5:
+            if preco_atual > media_movel and preco_atual > ultimos_quatro[-2] and qtd_altas > 5:
                 direcao = "call"
-            if preco_atual < media_movel and qtd_baixas > 5:
+            if preco_atual < media_movel and preco_atual < ultimos_quatro[-2] and qtd_baixas > 5:
                 direcao = "put"
 
             if direcao != "Indefinida":
