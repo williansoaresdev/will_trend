@@ -120,17 +120,27 @@ print("Monitorando:", ativo)
 
 historico = []
 
+
+def get_server_datetime():
+    server_timestamp = iq.get_server_timestamp()
+    if isinstance(server_timestamp, (int, float)):
+        if server_timestamp > 10**12:
+            server_timestamp = server_timestamp / 1000
+        return datetime.datetime.fromtimestamp(server_timestamp)
+    return datetime.datetime.now()
+
+
 # Roda a cada minuto até que caia no stop loss ou stop gain
 while True:
     try:
         processa_entrada = True
 
-        #print("Lendo último candle")
+        server_time = get_server_datetime()
         vela = iq.get_candles(
             ativo,
             60,
             1,
-            time.time()
+            server_time.timestamp()
         )[0]
 
         fechamento = vela["close"]
@@ -140,7 +150,7 @@ while True:
         if len(historico) > 9:
             historico.pop(0)
 
-        alerta_hora = datetime.datetime.now().strftime("%H:%M:%S")
+        alerta_hora = server_time.strftime("%H:%M:%S")
         print(f"{alerta_hora} {fechamento:.5f}")
 
         if len(historico) >= 9:
@@ -260,7 +270,7 @@ while True:
                         print(f"Ordem inserida! ID: {order_id}")
 
         # Wait until some seconds of the next minute
-        now = datetime.datetime.now()
+        now = get_server_datetime()
         seconds_until = (segundos_analise - now.second) % 60
         if seconds_until == 0:
             seconds_until = 60
@@ -272,7 +282,7 @@ while True:
     except Exception as e:
         print("Erro:", e)
         # Wait until some seconds of the next minute
-        now = datetime.datetime.now()
+        now = get_server_datetime()
         seconds_until = (segundos_analise - now.second) % 60
         if seconds_until == 0:
             seconds_until = 60
