@@ -287,9 +287,10 @@ while True:
                 if direcao != "Indefinida":
                     check, order_id = iq.buy(valor_operacao, ativo, direcao, tempo_operacao)
                     if check:
-                        print(f"Ordem inserida! ID: {order_id}")
+                        mensagem = f"Ordem de {direcao} {valor_operacao} inserida! ID: {order_id}"
+                        print(mensagem)
+                        send_slack_notification(mensagem)
                         if para_apos_primeira_entrada:
-                            send_slack_notification(f"Ordem de {direcao} {valor_operacao} inserida, encerrando... ID: {order_id}")
                             exit()
 
 
