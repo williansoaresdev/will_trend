@@ -1,6 +1,7 @@
 '''
     Executor de ordens IQOption
     -> Media Móvel 9 fechamentos
+    -> Engolfo em direção a tendência da média
     -> Entrada de 1 min
     -> 1 Soro
     -> 4 Gales
@@ -22,6 +23,15 @@ import requests
 # Webhook do Slack
 SLACK_WEBHOOK = "https://hooks.slack.com/services/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"
 
+print("*=================================================================*")
+print("|                                                                 |")
+print("|                                                                 |")
+print("| IQ OPTION - ENGOLFO EM TENDENCIA 9M                             |")
+print("|                                                 Willian Soares  |")
+print("|                                                                 |")
+print("*=================================================================*")
+
+
 def send_slack_notification(mensagem):
     """Envia uma notificação para o Slack via webhook"""
     try:
@@ -29,6 +39,7 @@ def send_slack_notification(mensagem):
         requests.post(SLACK_WEBHOOK, json=payload)
     except Exception as e:
         print(f"Erro ao enviar notificação ao Slack: {e}")
+
 
 # Meu email de login
 LOGIN = "usandodocs@gmail.com"
@@ -78,8 +89,17 @@ else:
 # Verifica ativo disponível
 ativo = "EURUSD-OTC"
 
-# Valor padrao de operacao (5%)
-entrada_padrao = saldo * 0.05
+# Valor padrao de operacao
+while True:
+    try:
+        entrada_padrao_texto = input("Digite o valor para entrada_padrao (entre 2 e 100): ").strip()
+        entrada_padrao = float(entrada_padrao_texto)
+        if 2 <= entrada_padrao <= 100:
+            break
+        print("Valor inválido. Informe um valor entre 2 e 100.")
+    except ValueError:
+        print("Valor inválido. Informe um valor numérico entre 2 e 100.")
+
 valor_operacao = entrada_padrao
 
 # Taxa padrão de profit mínimo
@@ -91,11 +111,11 @@ max_soro = 4
 # Soma das percas (para o gale)
 soma_percas = 0
 qtd_percas = 0
-max_gales = entrada_padrao * 2
+max_gales = 4
 
 # Stop Loss e Stop Gain
 stop_loss = saldo * 0.5
-stop_gain = saldo * 1.1
+stop_gain = saldo * 1.04
 
 # Tempo padrao de operacao
 tempo_operacao = 1
@@ -112,6 +132,9 @@ qtd_derrotas = 0
 
 # Para controle das entradas
 check, order_id = False, 0
+
+# Para controle humano das entradas
+para_apos_primeira_entrada = True
 
 print("Monitorando:", ativo)
 
@@ -130,6 +153,8 @@ def get_server_datetime():
 # Roda a cada minuto até que caia no stop loss ou stop gain
 while True:
     try:
+        processa_entrada = True
+
         server_time = get_server_datetime()
         vela = iq.get_candles(
             ativo,
@@ -151,6 +176,8 @@ while True:
         if len(historico) >= 9:
             # Se veio de uma operação anterior, faz a análise de vitória ou derrota
             if direcao != "Indefinida":
+                processa_entrada = False # Não processa nova entrada logo após uma operação, só analisa a anterior
+
                 saldo_antes = saldo
                 saldo = iq.get_balance()
                 profit = saldo - saldo_antes
@@ -170,7 +197,7 @@ while True:
                     soma_percas = 0
                     qtd_percas = 0
 
-                    with open("historico_avg.txt", "a", encoding="utf-8") as arquivo_historico:
+                    with open("historico.txt", "a", encoding="utf-8") as arquivo_historico:
                         arquivo_historico.write("Gain\n")
 
                     print(f"## OPERAÇÃO VENCEDORA [{qtd_vitorias}x{qtd_derrotas}] Saldo antes: {saldo_antes:.2f}, Saldo depois: {saldo:.2f}")
@@ -190,7 +217,7 @@ while True:
                     if qtd_percas > max_gales:
                         valor_operacao = entrada_padrao
 
-                    with open("historico_avg.txt", "a", encoding="utf-8") as arquivo_historico:
+                    with open("historico.txt", "a", encoding="utf-8") as arquivo_historico:
                         arquivo_historico.write("Loss\n")
 
                     print(f"## OPERAÇÃO PERDEDORA [{qtd_vitorias}x{qtd_derrotas}] Saldo antes: {saldo_antes:.2f}, Saldo depois: {saldo:.2f}")
@@ -200,7 +227,7 @@ while True:
                     print(mensagem)
                     send_slack_notification(mensagem)
                     exit()
-
+                    
                 if saldo >= stop_gain:
                     mensagem = f"## STOP GAIN ATINGIDO! Saldo atual: {saldo:.2f}, Stop Gain: {stop_gain:.2f}"
                     print(mensagem)
@@ -222,21 +249,52 @@ while True:
 
                 # Conta as baixas
                 if historico[i] < historico[i-1]:
-                    qtd_baixas += 1           
+                    qtd_baixas += 1       
 
-            # 1 - Estar acima da média, 2 - Estar acima do último fechamento, 3 - A maioria dos ultimos candles forem de alta
-            if preco_atual > media_movel and preco_atual > ultimos_quatro[-2] and qtd_altas > 5:
-                direcao = "call"
-            if preco_atual < media_movel and preco_atual < ultimos_quatro[-2] and qtd_baixas > 5:
-                direcao = "put"
+            engolfo_alta = (
+                ultimos_quatro[2] < ultimos_quatro[1]
+                and ultimos_quatro[3] > ultimos_quatro[2]
+                and ultimos_quatro[3] > ultimos_quatro[1]
+                and preco_atual > media_movel
+                #and qtd_altas > 5
+            )
+            engolfo_baixa = (
+                ultimos_quatro[2] > ultimos_quatro[1]
+                and ultimos_quatro[3] < ultimos_quatro[2]
+                and ultimos_quatro[3] < ultimos_quatro[1]
+                and preco_atual < media_movel
+                #and qtd_baixas > 5
+            )
 
-            if direcao != "Indefinida":
-                check, order_id = iq.buy(valor_operacao, ativo, direcao, tempo_operacao)
-                if check:
-                    print(f"Ordem inserida! ID: {order_id}")
+            delta3 = abs(ultimos_quatro[3] - ultimos_quatro[2]) # ultimo candle
+            delta2 = abs(ultimos_quatro[2] - ultimos_quatro[1]) # penultimo candle
 
-        # Entra sempre no mesmo horario de cada minuto
-        now = server_time
+            delta3_ideal = delta2 * 1.25
+
+            if processa_entrada:
+                if delta2 >= 0.0003 and delta3 >= delta3_ideal:
+                    if engolfo_alta or engolfo_baixa:
+                        ultimos_tres = historico[-3:]
+                        ultimos_tres_formatados = ", ".join(f"{valor:.5f}" for valor in ultimos_tres)
+
+                        if engolfo_alta:
+                            print(f"ALERTA: Engolfo de alta - Fechamentos últimos 3 candles: {ultimos_tres_formatados}")
+                            direcao = "call"
+                        elif engolfo_baixa:
+                            print(f"ALERTA: Engolfo de baixa - Fechamentos últimos 3 candles: {ultimos_tres_formatados}")
+                            direcao = "put"
+
+                if direcao != "Indefinida":
+                    check, order_id = iq.buy(valor_operacao, ativo, direcao, tempo_operacao)
+                    if check:
+                        print(f"Ordem inserida! ID: {order_id}")
+                        if para_apos_primeira_entrada:
+                            send_slack_notification(f"Ordem de {direcao} {valor_operacao} inserida, encerrando... ID: {order_id}")
+                            exit()
+
+
+        # Wait until some seconds of the next minute
+        now = get_server_datetime()
         seconds_until = (segundos_analise - now.second) % 60
         if seconds_until == 0:
             seconds_until = 60

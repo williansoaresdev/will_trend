@@ -82,7 +82,7 @@ else:
 ativo = "EURUSD-OTC"
 
 # Valor padrao de operacao
-entrada_padrao = 2
+entrada_padrao = saldo * 0.02
 valor_operacao = entrada_padrao
 
 # Taxa padrão de profit mínimo
@@ -97,8 +97,8 @@ qtd_percas = 0
 max_gales = 4
 
 # Stop Loss e Stop Gain
-stop_loss = saldo * 0.9
-stop_gain = saldo * 1.1
+stop_loss = saldo * 0.5
+stop_gain = saldo * 1.04
 
 # Tempo padrao de operacao
 tempo_operacao = 1
@@ -219,7 +219,7 @@ while True:
             ultimos_quatro = historico[-4:]
             preco_atual = ultimos_quatro[-1]
             media_movel = sum(historico[-9:]) / 9
-            
+
             qtd_altas = 0
             qtd_baixas = 0
             for i in range(len(historico) - 1, 1, -1):
@@ -236,14 +236,14 @@ while True:
                 and ultimos_quatro[3] > ultimos_quatro[2]
                 and ultimos_quatro[3] > ultimos_quatro[1]
                 and preco_atual > media_movel
-                and qtd_altas > 5
+                #and qtd_altas > 5
             )
             engolfo_baixa = (
                 ultimos_quatro[2] > ultimos_quatro[1]
                 and ultimos_quatro[3] < ultimos_quatro[2]
                 and ultimos_quatro[3] < ultimos_quatro[1]
                 and preco_atual < media_movel
-                and qtd_baixas > 5
+                #and qtd_baixas > 5
             )
 
             delta3 = abs(ultimos_quatro[3] - ultimos_quatro[2]) # ultimo candle

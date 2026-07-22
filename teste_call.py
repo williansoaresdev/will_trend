@@ -21,9 +21,6 @@ iq.change_balance("PRACTICE")
 saldo = iq.get_balance()
 print(f"Saldo prática: {saldo}")
 
-# Verifica ativo disponível
-ativos = iq.get_all_open_time()
-
 # Para usar nas entradas depois
 operando_digitais = False
 
@@ -33,16 +30,15 @@ valor_operacao = 10
 # Tempo padrao de operacao
 tempo_operacao = 1
 
-if ativos["binary"]["EURUSD"]["open"]:
-    ativo = "EURUSD"
-elif ativos["binary"]["EURUSD-OTC"]["open"]:
-    ativo = "EURUSD-OTC"
-else:
-    print("Nenhum ativo disponível.")
-    exit()
+ativo = "EURUSD-OTC"
 
 print("Realizando entrada...", ativo)
 
-iq.buy(valor_operacao, ativo, "call", tempo_operacao)
+check, order_id = iq.buy(valor_operacao, ativo, "call", tempo_operacao)
 
-print("Entrada realizada. Aguarde...")
+if check:
+    print(f"Entrada realizada com sucesso! Order ID: {order_id}")
+    time.sleep(110)
+    print("Verificando resultado da operação...")
+    win = iq.check_win(order_id)
+    print(f"Resultado da operação: {win}")
