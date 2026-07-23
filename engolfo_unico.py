@@ -21,7 +21,7 @@ import datetime
 import requests
 
 # Webhook do Slack
-SLACK_WEBHOOK = "https://hooks.slack.com/services/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"
+SLACK_WEBHOOK = "https://hooks.slack.com/services/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"
 
 print("*=================================================================*")
 print("|                                                                 |")
@@ -58,7 +58,6 @@ if not ok:
     print("Erro:", motivo)
     exit()
 
-
 while True:
     print("Escolha a conta:")
     print("1 - Conta de prática")
@@ -79,6 +78,8 @@ while True:
 print("Login OK - alterando para a conta selecionada...")
 
 iq.change_balance(conta_selecionada)
+
+send_slack_notification(f"IQ logado via engolfo_unico.py em {conta_selecionada}")
 
 saldo = iq.get_balance()
 if conta_selecionada == "PRACTICE":
@@ -106,12 +107,12 @@ valor_operacao = entrada_padrao
 taxa_profit = 0.86
 
 # Maximo de Soro (valor de entrada) e Gales (quantidade de perdas consecutivas)
-max_soro = 4
+max_soro = entrada_padrao * 2
 
 # Soma das percas (para o gale)
 soma_percas = 0
 qtd_percas = 0
-max_gales = 4
+max_gales = 0
 
 # Stop Loss e Stop Gain
 stop_loss = saldo * 0.5
@@ -134,7 +135,7 @@ qtd_derrotas = 0
 check, order_id = False, 0
 
 # Para controle humano das entradas
-para_apos_primeira_entrada = True
+para_apos_primeira_entrada = False
 
 print("Monitorando:", ativo)
 

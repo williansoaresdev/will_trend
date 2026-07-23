@@ -20,7 +20,7 @@ import datetime
 import requests
 
 # Webhook do Slack
-SLACK_WEBHOOK = "https://hooks.slack.com/services/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"
+SLACK_WEBHOOK = "https://hooks.slack.com/services/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"
 
 def send_slack_notification(mensagem):
     """Envia uma notificação para o Slack via webhook"""
