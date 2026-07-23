@@ -21,7 +21,7 @@ import datetime
 import requests
 
 # Webhook do Slack
-SLACK_WEBHOOK = "https://hooks.slack.com/services/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"
+SLACK_WEBHOOK = "https://hooks.slack.com/services/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"
 
 print("*=================================================================*")
 print("|                                                                 |")
@@ -36,7 +36,12 @@ def send_slack_notification(mensagem):
     """Envia uma notificação para o Slack via webhook"""
     try:
         payload = {"text": mensagem}
-        requests.post(SLACK_WEBHOOK, json=payload)
+        headers = {
+            "Content-Type": "application/json"
+        }
+
+        requests.post(SLACK_WEBHOOK, json=payload, headers=headers, timeout=10)
+
     except Exception as e:
         print(f"Erro ao enviar notificação ao Slack: {e}")
 

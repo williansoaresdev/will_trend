@@ -2,8 +2,6 @@
     Executor de ordens IQOption
     -> Media Móvel 9 fechamentos
     -> Entrada de 1 min
-    -> 1 Soro
-    -> 4 Gales
 '''
 
 # Para pedir a senha no console
@@ -20,15 +18,28 @@ import datetime
 import requests
 
 # Webhook do Slack
-SLACK_WEBHOOK = "https://hooks.slack.com/services/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"
+SLACK_WEBHOOK = "https://hooks.slack.com/services/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"
 
 def send_slack_notification(mensagem):
     """Envia uma notificação para o Slack via webhook"""
     try:
         payload = {"text": mensagem}
-        requests.post(SLACK_WEBHOOK, json=payload)
+        
+        headers = {
+            "Content-Type": "application/json"
+        }
+
+        requests.post(SLACK_WEBHOOK, json=payload, headers=headers, timeout=10)
     except Exception as e:
         print(f"Erro ao enviar notificação ao Slack: {e}")
+
+print("*=================================================================*")
+print("|                                                                 |")
+print("|                                                                 |")
+print("| IQ OPTION - MEDIA MOVEL 9M TENDENCIA                            |")
+print("|                                                 Willian Soares  |")
+print("|                                                                 |")
+print("*=================================================================*")
 
 # Meu email de login
 LOGIN = "usandodocs@gmail.com"
@@ -69,6 +80,8 @@ print("Login OK - alterando para a conta selecionada...")
 
 iq.change_balance(conta_selecionada)
 
+send_slack_notification(f"IQ logado via avg.py em {conta_selecionada}")
+
 saldo = iq.get_balance()
 if conta_selecionada == "PRACTICE":
     print(f"Saldo prática: {saldo}")
@@ -78,20 +91,29 @@ else:
 # Verifica ativo disponível
 ativo = "EURUSD-OTC"
 
-# Valor padrao de operacao (5%)
-entrada_padrao = saldo * 0.05
+# Valor padrao de operacao
+while True:
+    try:
+        entrada_padrao_texto = input("Digite o valor para entrada_padrao (entre 2 e 100): ").strip()
+        entrada_padrao = float(entrada_padrao_texto)
+        if 2 <= entrada_padrao <= 100:
+            break
+        print("Valor inválido. Informe um valor entre 2 e 100.")
+    except ValueError:
+        print("Valor inválido. Informe um valor numérico entre 2 e 100.")
+
 valor_operacao = entrada_padrao
 
 # Taxa padrão de profit mínimo
 taxa_profit = 0.86
 
 # Maximo de Soro (valor de entrada) e Gales (quantidade de perdas consecutivas)
-max_soro = 4
+max_soro = entrada_padrao
 
 # Soma das percas (para o gale)
 soma_percas = 0
 qtd_percas = 0
-max_gales = entrada_padrao * 2
+max_gales = 0
 
 # Stop Loss e Stop Gain
 stop_loss = saldo * 0.5
@@ -109,6 +131,8 @@ direcao = "Indefinida"
 # Conta as vitorias
 qtd_vitorias = 0
 qtd_derrotas = 0
+max_vitorias = 10
+max_derrotas = 10
 
 # Para controle das entradas
 check, order_id = False, 0
@@ -142,19 +166,29 @@ while True:
 
         historico.append(fechamento)
 
-        if len(historico) > 9:
+        if len(historico) > 21:
             historico.pop(0)
 
         alerta_hora = server_time.strftime("%H:%M:%S")
         print(f"{alerta_hora} {fechamento:.5f}")
 
-        if len(historico) >= 9:
+        if len(historico) >= 21:
+            ultimos_quatro = historico[-4:]
+            preco_atual = ultimos_quatro[-1]
+            preco_anterior = ultimos_quatro[-2]
+
             # Se veio de uma operação anterior, faz a análise de vitória ou derrota
             if direcao != "Indefinida":
                 saldo_antes = saldo
                 saldo = iq.get_balance()
+
                 profit = saldo - saldo_antes
                 print(f"Resultado: {profit}")
+
+                if direcao == "call":
+                    profit = preco_atual - preco_anterior
+                else: # put
+                    profit = preco_anterior - preco_atual 
 
                 # Processa vitórias
                 if profit > 0:
@@ -173,7 +207,7 @@ while True:
                     with open("historico_avg.txt", "a", encoding="utf-8") as arquivo_historico:
                         arquivo_historico.write("Gain\n")
 
-                    print(f"## OPERAÇÃO VENCEDORA [{qtd_vitorias}x{qtd_derrotas}] Saldo antes: {saldo_antes:.2f}, Saldo depois: {saldo:.2f}")
+                    print(f"## OPERAÇÃO VENCEDORA [{qtd_vitorias}x{qtd_derrotas}]")
                     
                 # Processa derrotas
                 elif profit < 0:
@@ -193,7 +227,7 @@ while True:
                     with open("historico_avg.txt", "a", encoding="utf-8") as arquivo_historico:
                         arquivo_historico.write("Loss\n")
 
-                    print(f"## OPERAÇÃO PERDEDORA [{qtd_vitorias}x{qtd_derrotas}] Saldo antes: {saldo_antes:.2f}, Saldo depois: {saldo:.2f}")
+                    print(f"## OPERAÇÃO PERDEDORA [{qtd_vitorias}x{qtd_derrotas}]")
 
                 if saldo <= stop_loss:
                     mensagem = f"## STOP LOSS ATINGIDO! Saldo atual: {saldo:.2f}, Stop Loss: {stop_loss:.2f}"
@@ -207,11 +241,22 @@ while True:
                     send_slack_notification(mensagem)
                     exit()
 
+                if qtd_derrotas >= max_derrotas:
+                    mensagem = f"## MAX PERDAS ATINGIDO! Saldo atual: {saldo:.2f}"
+                    print(mensagem)
+                    send_slack_notification(mensagem)
+                    exit()
+
+                if qtd_vitorias >= max_vitorias:
+                    mensagem = f"## MAX VITORIAS ATINGIDO! Saldo atual: {saldo:.2f}"
+                    print(mensagem)
+                    send_slack_notification(mensagem)
+                    exit()
+
             direcao = "Indefinida"
 
-            ultimos_quatro = historico[-4:]
-            preco_atual = ultimos_quatro[-1]
-            media_movel = sum(historico[-9:]) / 9
+            media_movel_9 = sum(historico[-9:]) / 9
+            media_movel_21 = sum(historico[-21:]) / 21
 
             qtd_altas = 0
             qtd_baixas = 0
@@ -224,10 +269,9 @@ while True:
                 if historico[i] < historico[i-1]:
                     qtd_baixas += 1           
 
-            # 1 - Estar acima da média, 2 - Estar acima do último fechamento, 3 - A maioria dos ultimos candles forem de alta
-            if preco_atual > media_movel and preco_atual > ultimos_quatro[-2] and qtd_altas > 5:
+            if preco_atual > media_movel_9 and preco_atual > media_movel_21:
                 direcao = "call"
-            if preco_atual < media_movel and preco_atual < ultimos_quatro[-2] and qtd_baixas > 5:
+            if preco_atual < media_movel_9 and preco_atual < media_movel_21:
                 direcao = "put"
 
             if direcao != "Indefinida":
@@ -240,9 +284,6 @@ while True:
         seconds_until = (segundos_analise - now.second) % 60
         if seconds_until == 0:
             seconds_until = 60
-        # Quando faz entrada só analisa 2 minutos depois
-        if direcao != "Indefinida":
-            seconds_until += 60
         time.sleep(seconds_until)
 
     except Exception as e:
