@@ -127,7 +127,7 @@ qtd_percas = 0
 max_gales = 0
 
 # Stop Loss e Stop Gain
-stop_loss = saldo * 0.5
+stop_loss = saldo * 0.9
 stop_gain = saldo * 1.1
 
 # Tempo padrao de operacao
@@ -190,11 +190,7 @@ while True:
 
             # Se veio de uma operação anterior, faz a análise de vitória ou derrota
             if direcao != "Indefinida":
-                saldo_antes = saldo
                 saldo = iq.get_balance()
-
-                profit = saldo - saldo_antes
-                print(f"Resultado: {profit}")
 
                 if direcao == "call":
                     profit = preco_atual - preco_anterior
@@ -203,6 +199,8 @@ while True:
 
                 # Processa vitórias
                 if profit > 0:
+                    print(f"Resultado: WIN")
+                    
                     # Se veio de uma derrota anterior (primeira vitoria), reinicia com a entrada padrao daqui pra frente
                     if qtd_percas > 0:
                         valor_operacao = entrada_padrao
@@ -222,6 +220,8 @@ while True:
                     
                 # Processa derrotas
                 elif profit < 0:
+                    print(f"Resultado: LOSS")
+                    
                     # Se é a primeira derrota, considera para os calculos de gale a entrada padrao
                     if qtd_percas == 0:
                         valor_operacao = entrada_padrao
@@ -268,17 +268,6 @@ while True:
 
             media_movel_9 = sum(historico[-9:]) / 9
             media_movel_21 = sum(historico[-21:]) / 21
-
-            qtd_altas = 0
-            qtd_baixas = 0
-            for i in range(len(historico) - 1, 1, -1):
-                # Conta as altas
-                if historico[i] > historico[i-1]:
-                    qtd_altas += 1
-
-                # Conta as baixas
-                if historico[i] < historico[i-1]:
-                    qtd_baixas += 1           
 
             if preco_atual > media_movel_9 and preco_atual > media_movel_21 and media_movel_9 > media_movel_21:
                 direcao = "call"
