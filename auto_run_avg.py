@@ -280,9 +280,9 @@ while True:
                 if historico[i] < historico[i-1]:
                     qtd_baixas += 1           
 
-            if preco_atual > media_movel_9 and preco_atual > media_movel_21:
+            if preco_atual > media_movel_9 and preco_atual > media_movel_21 and media_movel_9 > media_movel_21:
                 direcao = "call"
-            if preco_atual < media_movel_9 and preco_atual < media_movel_21:
+            if preco_atual < media_movel_9 and preco_atual < media_movel_21 and media_movel_9 < media_movel_21:
                 direcao = "put"
 
             if direcao != "Indefinida":
