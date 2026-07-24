@@ -1,6 +1,6 @@
 '''
     Executor de ordens IQOption
-    -> Media Móvel 9 fechamentos
+    -> Media Móvel 9 e 5 fechamentos
     -> Entrada de 1 min
 '''
 
@@ -47,7 +47,7 @@ def send_slack_notification(mensagem):
 print("*=================================================================*")
 print("|                                                                 |")
 print("|                                                                 |")
-print("| IQ OPTION - MEDIA MOVEL 9M TENDENCIA                            |")
+print("| IQ OPTION - MEDIA MOVEL 9/5 TENDENCIA                           |")
 print("|                                                 Willian Soares  |")
 print("|                                                                 |")
 print("*=================================================================*")
@@ -177,13 +177,13 @@ while True:
 
         historico.append(fechamento)
 
-        if len(historico) > 21:
+        if len(historico) > 9:
             historico.pop(0)
 
         alerta_hora = server_time.strftime("%H:%M:%S")
         print(f"{alerta_hora} {fechamento:.5f}")
 
-        if len(historico) >= 21:
+        if len(historico) >= 9:
             ultimos_quatro = historico[-4:]
             preco_atual = ultimos_quatro[-1]
             preco_anterior = ultimos_quatro[-2]
@@ -267,11 +267,17 @@ while True:
             direcao = "Indefinida"
 
             media_movel_9 = sum(historico[-9:]) / 9
-            media_movel_21 = sum(historico[-21:]) / 21
+            media_movel_5 = sum(historico[-5:]) / 5
 
-            if preco_atual > media_movel_9 and preco_atual > media_movel_21 and media_movel_9 > media_movel_21:
+            if (
+                preco_atual > media_movel_5
+                and media_movel_5 > media_movel_9 
+            ):
                 direcao = "call"
-            if preco_atual < media_movel_9 and preco_atual < media_movel_21 and media_movel_9 < media_movel_21:
+            if (
+                preco_atual < media_movel_5
+                and media_movel_5 < media_movel_9 
+            ):
                 direcao = "put"
 
             if direcao != "Indefinida":
