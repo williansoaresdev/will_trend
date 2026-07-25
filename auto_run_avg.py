@@ -87,7 +87,7 @@ while True:
     else:
         print("Opção inválida. Digite 1 ou 2.")
 
-print("Login OK - alterando para a conta selecionada...")
+print(f"Login OK - alterando para a conta {conta_selecionada}...")
 
 iq.change_balance(conta_selecionada)
 
@@ -98,6 +98,8 @@ if conta_selecionada == "PRACTICE":
     print(f"Saldo prática: {saldo}")
 else:
     print(f"Saldo real: {saldo}")
+
+saldo_inicial = saldo
 
 # Verifica ativo disponível
 ativo = "EURUSD-OTC"
@@ -127,8 +129,8 @@ qtd_percas = 0
 max_gales = 0
 
 # Stop Loss e Stop Gain
-stop_loss = saldo * 0.9
-stop_gain = saldo * 1.1
+stop_loss = saldo - (entrada_padrao * 5)
+stop_gain = saldo + (entrada_padrao * 10)
 
 # Tempo padrao de operacao
 tempo_operacao = 1
@@ -142,7 +144,7 @@ direcao = "Indefinida"
 # Conta as vitorias
 qtd_vitorias = 0
 qtd_derrotas = 0
-max_vitorias = 10
+max_vitorias = 20
 max_derrotas = 10
 
 # Para controle das entradas
@@ -199,12 +201,10 @@ while True:
 
                 # Processa vitórias
                 if profit > 0:
-                    print(f"Resultado: WIN")
-                    
                     # Se veio de uma derrota anterior (primeira vitoria), reinicia com a entrada padrao daqui pra frente
                     if qtd_percas > 0:
                         valor_operacao = entrada_padrao
-                    
+
                     valor_operacao = valor_operacao * round(1 + taxa_profit, 2)
                     if valor_operacao > max_soro:
                         valor_operacao = entrada_padrao
@@ -220,8 +220,6 @@ while True:
                     
                 # Processa derrotas
                 elif profit < 0:
-                    print(f"Resultado: LOSS")
-                    
                     # Se é a primeira derrota, considera para os calculos de gale a entrada padrao
                     if qtd_percas == 0:
                         valor_operacao = entrada_padrao
@@ -241,25 +239,25 @@ while True:
                     print(f"## OPERAÇÃO PERDEDORA [{qtd_vitorias}x{qtd_derrotas}]")
 
                 if saldo <= stop_loss:
-                    mensagem = f"## STOP LOSS ATINGIDO! Saldo atual: {saldo:.2f}, Stop Loss: {stop_loss:.2f}"
+                    mensagem = f"## STOP LOSS ATINGIDO! Saldo ini {saldo_inicial:.2f} atual: {saldo:.2f}, Stop Loss: {stop_loss:.2f}"
                     print(mensagem)
                     send_slack_notification(mensagem)
                     exit()
 
                 if saldo >= stop_gain:
-                    mensagem = f"## STOP GAIN ATINGIDO! Saldo atual: {saldo:.2f}, Stop Gain: {stop_gain:.2f}"
+                    mensagem = f"## STOP GAIN ATINGIDO! Saldo ini {saldo_inicial:.2f} atual: {saldo:.2f}, Stop Gain: {stop_gain:.2f}"
                     print(mensagem)
                     send_slack_notification(mensagem)
                     exit()
 
                 if qtd_derrotas >= max_derrotas:
-                    mensagem = f"## MAX PERDAS ATINGIDO! Saldo atual: {saldo:.2f}"
+                    mensagem = f"## MAX PERDAS ATINGIDO! Saldo ini {saldo_inicial:.2f} atual: {saldo:.2f}"
                     print(mensagem)
                     send_slack_notification(mensagem)
                     exit()
 
                 if qtd_vitorias >= max_vitorias:
-                    mensagem = f"## MAX VITORIAS ATINGIDO! Saldo atual: {saldo:.2f}"
+                    mensagem = f"## MAX VITORIAS ATINGIDO! Saldo ini {saldo_inicial:.2f} atual: {saldo:.2f}"
                     print(mensagem)
                     send_slack_notification(mensagem)
                     exit()
