@@ -266,15 +266,28 @@ while True:
 
             media_movel_9 = sum(historico[-9:]) / 9
             media_movel_5 = sum(historico[-5:]) / 5
+            
+            qtd_altas = 0
+            qtd_baixas = 0
+            for i in range(len(historico) - 1, 1, -1):
+                # Conta as altas
+                if historico[i] > historico[i-1]:
+                    qtd_altas += 1
+
+                # Conta as baixas
+                if historico[i] < historico[i-1]:
+                    qtd_baixas += 1       
 
             if (
                 preco_atual > media_movel_5
-                and media_movel_5 > media_movel_9 
+                and media_movel_5 > media_movel_9
+                and qtd_altas > 4
             ):
                 direcao = "call"
             if (
                 preco_atual < media_movel_5
-                and media_movel_5 < media_movel_9 
+                and media_movel_5 < media_movel_9
+                and qtd_baixas > 4
             ):
                 direcao = "put"
 
