@@ -144,8 +144,8 @@ direcao = "Indefinida"
 # Conta as vitorias
 qtd_vitorias = 0
 qtd_derrotas = 0
-max_vitorias = 20
-max_derrotas = 10
+max_vitorias = 10
+max_derrotas = 3
 
 # Para controle das entradas
 check, order_id = False, 0
