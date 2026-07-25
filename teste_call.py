@@ -38,7 +38,8 @@ check, order_id = iq.buy(valor_operacao, ativo, "call", tempo_operacao)
 
 if check:
     print(f"Entrada realizada com sucesso! Order ID: {order_id}")
-    time.sleep(110)
+    print("Esperando 65 segundos")
+    time.sleep(65)
     print("Verificando resultado da operação...")
-    win = iq.check_win(order_id)
+    win = iq.check_win_v3(order_id)
     print(f"Resultado da operação: {win}")
