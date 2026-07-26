@@ -127,6 +127,7 @@ max_soro = entrada_padrao
 soma_percas = 0
 qtd_percas = 0
 max_gales = 0
+checa_profit = False
 
 # Stop Loss e Stop Gain
 stop_loss = saldo - (entrada_padrao * 5)
@@ -146,6 +147,7 @@ qtd_vitorias = 0
 qtd_derrotas = 0
 max_vitorias = 10
 max_derrotas = 3
+analisa_stop_qtd = False
 
 # Para controle das entradas
 check, order_id = False, 0
@@ -194,49 +196,50 @@ while True:
             if direcao != "Indefinida":
                 saldo = iq.get_balance()
 
-                if direcao == "call":
-                    profit = preco_atual - preco_anterior
-                else: # put
-                    profit = preco_anterior - preco_atual 
+                if checa_profit:
+                    if direcao == "call":
+                        profit = preco_atual - preco_anterior
+                    else: # put
+                        profit = preco_anterior - preco_atual 
 
-                # Processa vitórias
-                if profit > 0:
-                    # Se veio de uma derrota anterior (primeira vitoria), reinicia com a entrada padrao daqui pra frente
-                    if qtd_percas > 0:
-                        valor_operacao = entrada_padrao
+                    # Processa vitórias
+                    if profit > 0:
+                        # Se veio de uma derrota anterior (primeira vitoria), reinicia com a entrada padrao daqui pra frente
+                        if qtd_percas > 0:
+                            valor_operacao = entrada_padrao
 
-                    valor_operacao = valor_operacao * round(1 + taxa_profit, 2)
-                    if valor_operacao > max_soro:
-                        valor_operacao = entrada_padrao
+                        valor_operacao = valor_operacao * round(1 + taxa_profit, 2)
+                        if valor_operacao > max_soro:
+                            valor_operacao = entrada_padrao
 
-                    qtd_vitorias += 1
-                    soma_percas = 0
-                    qtd_percas = 0
+                        qtd_vitorias += 1
+                        soma_percas = 0
+                        qtd_percas = 0
 
-                    with open("historico_avg.txt", "a", encoding="utf-8") as arquivo_historico:
-                        arquivo_historico.write("Gain\n")
+                        with open("historico_avg.txt", "a", encoding="utf-8") as arquivo_historico:
+                            arquivo_historico.write("Gain\n")
 
-                    print(f"## OPERAÇÃO VENCEDORA [{qtd_vitorias}x{qtd_derrotas}]")
-                    
-                # Processa derrotas
-                elif profit < 0:
-                    # Se é a primeira derrota, considera para os calculos de gale a entrada padrao
-                    if qtd_percas == 0:
-                        valor_operacao = entrada_padrao
-                    
-                    qtd_derrotas += 1
-                    soma_percas += valor_operacao
-                    qtd_percas += 1
+                        print(f"## OPERAÇÃO VENCEDORA [{qtd_vitorias}x{qtd_derrotas}]")
+                        
+                    # Processa derrotas
+                    elif profit < 0:
+                        # Se é a primeira derrota, considera para os calculos de gale a entrada padrao
+                        if qtd_percas == 0:
+                            valor_operacao = entrada_padrao
+                        
+                        qtd_derrotas += 1
+                        soma_percas += valor_operacao
+                        qtd_percas += 1
 
-                    valor_operacao = round(soma_percas / taxa_profit, 2)
-                    
-                    if qtd_percas > max_gales:
-                        valor_operacao = entrada_padrao
+                        valor_operacao = round(soma_percas / taxa_profit, 2)
+                        
+                        if qtd_percas > max_gales:
+                            valor_operacao = entrada_padrao
 
-                    with open("historico_avg.txt", "a", encoding="utf-8") as arquivo_historico:
-                        arquivo_historico.write("Loss\n")
+                        with open("historico_avg.txt", "a", encoding="utf-8") as arquivo_historico:
+                            arquivo_historico.write("Loss\n")
 
-                    print(f"## OPERAÇÃO PERDEDORA [{qtd_vitorias}x{qtd_derrotas}]")
+                        print(f"## OPERAÇÃO PERDEDORA [{qtd_vitorias}x{qtd_derrotas}]")
 
                 if saldo <= stop_loss:
                     mensagem = f"## STOP LOSS ATINGIDO! Saldo ini {saldo_inicial:.2f} atual: {saldo:.2f}, Stop Loss: {stop_loss:.2f}"
@@ -250,17 +253,18 @@ while True:
                     send_slack_notification(mensagem)
                     exit()
 
-                if qtd_derrotas >= max_derrotas:
-                    mensagem = f"## MAX PERDAS ATINGIDO! Saldo ini {saldo_inicial:.2f} atual: {saldo:.2f}"
-                    print(mensagem)
-                    send_slack_notification(mensagem)
-                    exit()
+                if analisa_stop_qtd:
+                    if qtd_derrotas >= max_derrotas:
+                        mensagem = f"## MAX PERDAS ATINGIDO! Saldo ini {saldo_inicial:.2f} atual: {saldo:.2f}"
+                        print(mensagem)
+                        send_slack_notification(mensagem)
+                        exit()
 
-                if qtd_vitorias >= max_vitorias:
-                    mensagem = f"## MAX VITORIAS ATINGIDO! Saldo ini {saldo_inicial:.2f} atual: {saldo:.2f}"
-                    print(mensagem)
-                    send_slack_notification(mensagem)
-                    exit()
+                    if qtd_vitorias >= max_vitorias:
+                        mensagem = f"## MAX VITORIAS ATINGIDO! Saldo ini {saldo_inicial:.2f} atual: {saldo:.2f}"
+                        print(mensagem)
+                        send_slack_notification(mensagem)
+                        exit()
 
             direcao = "Indefinida"
 
@@ -281,13 +285,13 @@ while True:
             if (
                 preco_atual > media_movel_5
                 and media_movel_5 > media_movel_9
-                and qtd_altas > 4
+                and qtd_altas > 5
             ):
                 direcao = "call"
             if (
                 preco_atual < media_movel_5
                 and media_movel_5 < media_movel_9
-                and qtd_baixas > 4
+                and qtd_baixas > 5
             ):
                 direcao = "put"
 
