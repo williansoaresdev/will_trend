@@ -213,6 +213,9 @@ while True:
                     
                     # Processa vitórias
                     if profit > 0:
+                        qtd_vitorias += 1
+                        qtd_vitorias_seguidas += 1
+
                         print(f"## OPERAÇÃO VENCEDORA [{qtd_vitorias}x{qtd_derrotas}]")
 
                         # Se veio de uma derrota anterior (primeira vitoria), reinicia com a entrada padrao daqui pra frente
@@ -226,8 +229,6 @@ while True:
                         else:
                             print(f"Valor da operação atualizado para {valor_operacao:.2f} após vitória.")
 
-                        qtd_vitorias += 1
-                        qtd_vitorias_seguidas += 1
                         soma_percas = 0
                         qtd_percas_seguidas = 0
 
@@ -236,6 +237,8 @@ while True:
                         
                     # Processa derrotas
                     elif profit < 0:
+                        qtd_derrotas += 1
+                        
                         print(f"## OPERAÇÃO PERDEDORA [{qtd_vitorias}x{qtd_derrotas}]")
 
                         # Se é a primeira derrota, considera para os calculos de gale a entrada padrao
@@ -244,7 +247,6 @@ while True:
 
                         qtd_vitorias_seguidas = 0
                         
-                        qtd_derrotas += 1
                         soma_percas += valor_operacao
                         qtd_percas_seguidas += 1
 
@@ -288,7 +290,6 @@ while True:
 
             delta_minimo = 0.0018
             delta_maximo = 0.0160
-            delta = abs(candle_anterior - preco_atual)
 
             media_movel_5 = sum(historico[-5:]) / 5
             candle_anterior = historico[-2]
@@ -296,6 +297,8 @@ while True:
 
             candle_anterior_em_alta = candle_anterior > candle_antes_do_anterior
             candle_anterior_em_baixa = candle_anterior < candle_antes_do_anterior
+
+            delta = abs(candle_anterior - preco_atual)
 
             # Em reversão, o delta mínimo é 25% do candle anterior fazendo um engolfo
             reversao = (preco_atual > historico[-2] and historico[-2] < historico[-3]) or (preco_atual < historico[-2] and historico[-2] > historico[-3])
