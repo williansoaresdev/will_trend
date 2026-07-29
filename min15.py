@@ -1,7 +1,6 @@
 '''
     Executor de ordens IQOption
-    -> Media Móvel 9 e 5 fechamentos
-    -> Entrada de 1 min
+    -> Analise de 15 minutos
 '''
 
 # Para pedir a senha no console
@@ -47,7 +46,7 @@ def send_slack_notification(mensagem):
 print("*=================================================================*")
 print("|                                                                 |")
 print("|                                                                 |")
-print("| IQ OPTION - MEDIA MOVEL 9/5 TENDENCIA                           |")
+print("| IQ OPTION - MEDIA MOVEL 5 TENDENCIA OU REVERSAO                 |")
 print("|                                                 Willian Soares  |")
 print("|                                                                 |")
 print("*=================================================================*")
@@ -121,34 +120,36 @@ valor_operacao = entrada_padrao
 taxa_profit = 0.86
 
 # Maximo de Soro (valor de entrada) e Gales (quantidade de perdas consecutivas)
-max_soro = entrada_padrao
+max_soro = entrada_padrao * 2
 
 # Soma das percas (para o gale)
 soma_percas = 0
-qtd_percas = 0
+qtd_percas_seguidas = 0
 max_gales = 0
-checa_profit = False
+checa_profit = True
 
 # Stop Loss e Stop Gain
 stop_loss = saldo - (entrada_padrao * 5)
 stop_gain = saldo + (entrada_padrao * 10)
 
 # Tempo padrao de operacao
-tempo_operacao = 1
+tempo_operacao = 15
 
 # Segundos para analisar e entrar
-segundos_analise = 59
+segundos_analise = 15 * 60
 
 # Direção da operação (call ou put)
 direcao = "Indefinida"
 
 # Conta as vitorias
 qtd_vitorias = 0
+qtd_vitorias_seguidas = 0
 qtd_derrotas = 0
 qtd_operacoes = 0
-max_vitorias = 10
-max_derrotas = 3
+max_vitorias = 30
+max_derrotas = 10
 analisa_stop_qtd = False
+max_operacoes = 100
 
 # Para controle das entradas
 check, order_id = False, 0
@@ -167,13 +168,21 @@ def get_server_datetime():
     return datetime.datetime.now()
 
 
-# Roda a cada minuto até que caia no stop loss ou stop gain
+def calcular_segundos_ate_proximo_analise(now):
+    intervalo = 15 * 60
+    segundos_restantes = (intervalo - (now.minute % 15) * 60 - now.second) % intervalo
+    if segundos_restantes == 0:
+        return intervalo
+    return segundos_restantes
+
+
+# Roda a cada 15 minutos até que caia no stop loss ou stop gain
 while True:
     try:
         server_time = get_server_datetime()
         vela = iq.get_candles(
             ativo,
-            60,
+            900,
             1,
             server_time.timestamp()
         )[0]
@@ -182,65 +191,73 @@ while True:
 
         historico.append(fechamento)
 
-        if len(historico) > 9:
+        if len(historico) > 5:
             historico.pop(0)
 
         alerta_hora = server_time.strftime("%H:%M:%S")
         print(f"{alerta_hora} {fechamento:.5f}")
 
-        if len(historico) >= 9:
+        if len(historico) >= 5:
             ultimos_quatro = historico[-4:]
             preco_atual = ultimos_quatro[-1]
             preco_anterior = ultimos_quatro[-2]
 
             # Se veio de uma operação anterior, faz a análise de vitória ou derrota
             if direcao != "Indefinida":
+                saldo_anterior = saldo
+
                 saldo = iq.get_balance()
 
                 if checa_profit:
-                    if direcao == "call":
-                        profit = preco_atual - preco_anterior
-                    else: # put
-                        profit = preco_anterior - preco_atual 
-
+                    profit = round(saldo - saldo_anterior, 2)
+                    
                     # Processa vitórias
                     if profit > 0:
+                        print(f"## OPERAÇÃO VENCEDORA [{qtd_vitorias}x{qtd_derrotas}]")
+
                         # Se veio de uma derrota anterior (primeira vitoria), reinicia com a entrada padrao daqui pra frente
-                        if qtd_percas > 0:
+                        if qtd_percas_seguidas > 0:
                             valor_operacao = entrada_padrao
 
                         valor_operacao = valor_operacao * round(1 + taxa_profit, 2)
                         if valor_operacao > max_soro:
                             valor_operacao = entrada_padrao
+                            print(f"Valor da operação atingiu o máximo de Soro ({max_soro}), reiniciando com entrada padrão {valor_operacao:.2f}.")
+                        else:
+                            print(f"Valor da operação atualizado para {valor_operacao:.2f} após vitória.")
 
                         qtd_vitorias += 1
+                        qtd_vitorias_seguidas += 1
                         soma_percas = 0
-                        qtd_percas = 0
+                        qtd_percas_seguidas = 0
 
-                        with open("historico_avg.txt", "a", encoding="utf-8") as arquivo_historico:
+                        with open("historico_15.txt", "a", encoding="utf-8") as arquivo_historico:
                             arquivo_historico.write("Gain\n")
-
-                        print(f"## OPERAÇÃO VENCEDORA [{qtd_vitorias}x{qtd_derrotas}]")
                         
                     # Processa derrotas
                     elif profit < 0:
+                        print(f"## OPERAÇÃO PERDEDORA [{qtd_vitorias}x{qtd_derrotas}]")
+
                         # Se é a primeira derrota, considera para os calculos de gale a entrada padrao
-                        if qtd_percas == 0:
+                        if qtd_vitorias_seguidas > 0:
                             valor_operacao = entrada_padrao
+
+                        qtd_vitorias_seguidas = 0
                         
                         qtd_derrotas += 1
                         soma_percas += valor_operacao
-                        qtd_percas += 1
+                        qtd_percas_seguidas += 1
 
                         valor_operacao = round(soma_percas / taxa_profit, 2)
                         
-                        if qtd_percas > max_gales:
+                        if qtd_percas_seguidas > max_gales:
                             valor_operacao = entrada_padrao
+                            print(f"Quantidade de perdas seguidas atingiu o máximo de Gales ({max_gales}), reiniciando com entrada padrão {valor_operacao:.2f}.")
+                        else:
+                            print(f"Valor da operação atualizado para {valor_operacao:.2f} após derrota.")
 
-                        with open("historico_avg.txt", "a", encoding="utf-8") as arquivo_historico:
+                        with open("historico_15.txt", "a", encoding="utf-8") as arquivo_historico:
                             arquivo_historico.write("Loss\n")
-
-                        print(f"## OPERAÇÃO PERDEDORA [{qtd_vitorias}x{qtd_derrotas}]")
 
                 if saldo <= stop_loss:
                     mensagem = f"## STOP LOSS ATINGIDO! Saldo ini {saldo_inicial:.2f} atual: {saldo:.2f}, Stop Loss: {stop_loss:.2f}"
@@ -269,54 +286,49 @@ while True:
 
             direcao = "Indefinida"
 
-            media_movel_9 = sum(historico[-9:]) / 9
+            delta_minimo = 0.0018
+            delta_maximo = 0.0160
+            delta = abs(candle_anterior - preco_atual)
+
             media_movel_5 = sum(historico[-5:]) / 5
-            
-            qtd_altas = 0
-            qtd_baixas = 0
-            for i in range(len(historico) - 1, 1, -1):
-                # Conta as altas
-                if historico[i] > historico[i-1]:
-                    qtd_altas += 1
+            candle_anterior = historico[-2]
+            candle_antes_do_anterior = historico[-3]
 
-                # Conta as baixas
-                if historico[i] < historico[i-1]:
-                    qtd_baixas += 1       
+            candle_anterior_em_alta = candle_anterior > candle_antes_do_anterior
+            candle_anterior_em_baixa = candle_anterior < candle_antes_do_anterior
 
-            if (
-                preco_atual > media_movel_5
-                and media_movel_5 > media_movel_9
-                #and qtd_altas > 5
-            ):
-                direcao = "call"
-            if (
-                preco_atual < media_movel_5
-                and media_movel_5 < media_movel_9
-                #and qtd_baixas > 5
-            ):
-                direcao = "put"
+            # Em reversão, o delta mínimo é 25% do candle anterior fazendo um engolfo
+            reversao = (preco_atual > historico[-2] and historico[-2] < historico[-3]) or (preco_atual < historico[-2] and historico[-2] > historico[-3])
+            if reversao:
+                print("Reversão detectada!")
+                delta_minimo = (historico[-2] - historico[-3]) * 0.25
+
+            # Não entra em candles mto pequenos ou mto grandes
+            if delta > delta_minimo or delta < delta_maximo:
+                if preco_atual > media_movel_5 and candle_anterior_em_alta:
+                    direcao = "call"
+                elif preco_atual < media_movel_5 and candle_anterior_em_baixa:
+                    direcao = "put"
+                else:
+                    direcao = "Indefinida"
+            else:
+                print("Delta do candle atual fora do intervalo permitido.")
 
             if direcao != "Indefinida":
                 check, order_id = iq.buy(valor_operacao, ativo, direcao, tempo_operacao)
                 if check:
                     qtd_operacoes += 1
-                    print(f"Ordem inserida! ID: {order_id}")
-                    if qtd_operacoes == 15:
-                        print("Encerrando aqui, 15 entradas feits. Tchau.")
+                    print(f"Ordem inserida em {direcao}! ID: {order_id}")
+                    if qtd_operacoes > max_operacoes:
+                        print(f"Encerrando aqui, {max_operacoes} entradas feitas. Tchau.")
                         exit()
 
-        # Entra sempre no mesmo horario de cada minuto
         now = server_time
-        seconds_until = (segundos_analise - now.second) % 60
-        if seconds_until == 0:
-            seconds_until = 60
+        seconds_until = calcular_segundos_ate_proximo_analise(now)
         time.sleep(seconds_until)
 
     except Exception as e:
         print("Erro:", e)
-        # Wait until some seconds of the next minute
         now = get_server_datetime()
-        seconds_until = (segundos_analise - now.second) % 60
-        if seconds_until == 0:
-            seconds_until = 60
+        seconds_until = calcular_segundos_ate_proximo_analise(now)
         time.sleep(seconds_until)

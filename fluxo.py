@@ -1,7 +1,10 @@
 '''
     Executor de ordens IQOption
-    -> Media Móvel 9 e 5 fechamentos
+    -> Media Móvel 5 fechamentos
     -> Entrada de 1 min
+    -> Se vitoria, faz 1 soro
+    -> Segue a tendencia ou a reversão, dependendo do caso
+    -> Se perde duas seguidas, inverte
 '''
 
 # Para pedir a senha no console
@@ -47,7 +50,7 @@ def send_slack_notification(mensagem):
 print("*=================================================================*")
 print("|                                                                 |")
 print("|                                                                 |")
-print("| IQ OPTION - MEDIA MOVEL 9/5 TENDENCIA                           |")
+print("| IQ OPTION - MEDIA MOVEL 5 TENDENCIA OU REVERSAO                 |")
 print("|                                                 Willian Soares  |")
 print("|                                                                 |")
 print("*=================================================================*")
@@ -121,13 +124,13 @@ valor_operacao = entrada_padrao
 taxa_profit = 0.86
 
 # Maximo de Soro (valor de entrada) e Gales (quantidade de perdas consecutivas)
-max_soro = entrada_padrao
+max_soro = entrada_padrao * 2
 
 # Soma das percas (para o gale)
 soma_percas = 0
 qtd_percas = 0
 max_gales = 0
-checa_profit = False
+checa_profit = True
 
 # Stop Loss e Stop Gain
 stop_loss = saldo - (entrada_padrao * 5)
@@ -137,7 +140,7 @@ stop_gain = saldo + (entrada_padrao * 10)
 tempo_operacao = 1
 
 # Segundos para analisar e entrar
-segundos_analise = 59
+segundos_analise = 50
 
 # Direção da operação (call ou put)
 direcao = "Indefinida"
@@ -146,12 +149,16 @@ direcao = "Indefinida"
 qtd_vitorias = 0
 qtd_derrotas = 0
 qtd_operacoes = 0
-max_vitorias = 10
-max_derrotas = 3
+max_vitorias = 30
+max_derrotas = 10
 analisa_stop_qtd = False
+max_operacoes = 100
 
 # Para controle das entradas
 check, order_id = False, 0
+
+# Estrategia tend | revers
+estrategia = "tend"
 
 print("Monitorando:", ativo)
 
@@ -188,21 +195,22 @@ while True:
         alerta_hora = server_time.strftime("%H:%M:%S")
         print(f"{alerta_hora} {fechamento:.5f}")
 
-        if len(historico) >= 9:
+        if len(historico) >= 5:
             ultimos_quatro = historico[-4:]
             preco_atual = ultimos_quatro[-1]
             preco_anterior = ultimos_quatro[-2]
 
             # Se veio de uma operação anterior, faz a análise de vitória ou derrota
             if direcao != "Indefinida":
+                saldo_anterior = saldo
+
                 saldo = iq.get_balance()
 
-                if checa_profit:
-                    if direcao == "call":
-                        profit = preco_atual - preco_anterior
-                    else: # put
-                        profit = preco_anterior - preco_atual 
+                print(f"Remaining {iq.get_remaning(1)}")
 
+                if checa_profit:
+                    profit = round(saldo > saldo_anterior, 2)
+                    
                     # Processa vitórias
                     if profit > 0:
                         # Se veio de uma derrota anterior (primeira vitoria), reinicia com a entrada padrao daqui pra frente
@@ -242,6 +250,15 @@ while True:
 
                         print(f"## OPERAÇÃO PERDEDORA [{qtd_vitorias}x{qtd_derrotas}]")
 
+                        # Se chegou em 2 perdas seguidas, inverte a estrategia
+                        if qtd_percas == 2:
+                            if estrategia == "tend":
+                                estrategia = "revers"
+                            else:
+                                estrategia = "tend"
+                            qtd_percas = 0
+                            print(f"Invertendendo a estrategia para {estrategia}")
+
                 if saldo <= stop_loss:
                     mensagem = f"## STOP LOSS ATINGIDO! Saldo ini {saldo_inicial:.2f} atual: {saldo:.2f}, Stop Loss: {stop_loss:.2f}"
                     print(mensagem)
@@ -269,7 +286,7 @@ while True:
 
             direcao = "Indefinida"
 
-            media_movel_9 = sum(historico[-9:]) / 9
+            #media_movel_9 = sum(historico[-9:]) / 9
             media_movel_5 = sum(historico[-5:]) / 5
             
             qtd_altas = 0
@@ -283,27 +300,38 @@ while True:
                 if historico[i] < historico[i-1]:
                     qtd_baixas += 1       
 
+            # estrategia tendencia
             if (
                 preco_atual > media_movel_5
-                and media_movel_5 > media_movel_9
+                #and media_movel_5 > media_movel_9
                 #and qtd_altas > 5
             ):
                 direcao = "call"
             if (
                 preco_atual < media_movel_5
-                and media_movel_5 < media_movel_9
+                #and media_movel_5 < media_movel_9
                 #and qtd_baixas > 5
             ):
                 direcao = "put"
+
+            # Se for para interter para reversão
+            if estrategia == "revers":
+                if direcao == "call":
+                    direcao = "put"
+                else:
+                    direcao = "call"
 
             if direcao != "Indefinida":
                 check, order_id = iq.buy(valor_operacao, ativo, direcao, tempo_operacao)
                 if check:
                     qtd_operacoes += 1
-                    print(f"Ordem inserida! ID: {order_id}")
-                    if qtd_operacoes == 15:
-                        print("Encerrando aqui, 15 entradas feits. Tchau.")
+                    print(f"Ordem inserida em {direcao}! ID: {order_id}")
+                    if qtd_operacoes > max_operacoes:
+                        print(f"Encerrando aqui, {max_operacoes} entradas feits. Tchau.")
                         exit()
+                    # Faz ele esperar mais 2 entradas para avaliar o cenario
+                    historico.pop(0)
+                    historico.pop(0)
 
         # Entra sempre no mesmo horario de cada minuto
         now = server_time

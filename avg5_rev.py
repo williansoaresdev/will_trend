@@ -121,13 +121,13 @@ valor_operacao = entrada_padrao
 taxa_profit = 0.86
 
 # Maximo de Soro (valor de entrada) e Gales (quantidade de perdas consecutivas)
-max_soro = entrada_padrao
+max_soro = entrada_padrao * 2
 
 # Soma das percas (para o gale)
 soma_percas = 0
 qtd_percas = 0
 max_gales = 0
-checa_profit = False
+checa_profit = True
 
 # Stop Loss e Stop Gain
 stop_loss = saldo - (entrada_padrao * 5)
@@ -137,7 +137,7 @@ stop_gain = saldo + (entrada_padrao * 10)
 tempo_operacao = 1
 
 # Segundos para analisar e entrar
-segundos_analise = 59
+segundos_analise = 5
 
 # Direção da operação (call ou put)
 direcao = "Indefinida"
@@ -195,14 +195,16 @@ while True:
 
             # Se veio de uma operação anterior, faz a análise de vitória ou derrota
             if direcao != "Indefinida":
+                saldo_anterior = saldo
+
+                #if checa_profit:
+                #    time.sleep(5)
+
                 saldo = iq.get_balance()
 
                 if checa_profit:
-                    if direcao == "call":
-                        profit = preco_atual - preco_anterior
-                    else: # put
-                        profit = preco_anterior - preco_atual 
-
+                    profit = saldo > saldo_anterior
+                    
                     # Processa vitórias
                     if profit > 0:
                         # Se veio de uma derrota anterior (primeira vitoria), reinicia com a entrada padrao daqui pra frente
@@ -288,13 +290,13 @@ while True:
                 and media_movel_5 > media_movel_9
                 #and qtd_altas > 5
             ):
-                direcao = "call"
+                direcao = "put"
             if (
                 preco_atual < media_movel_5
                 and media_movel_5 < media_movel_9
                 #and qtd_baixas > 5
             ):
-                direcao = "put"
+                direcao = "call"
 
             if direcao != "Indefinida":
                 check, order_id = iq.buy(valor_operacao, ativo, direcao, tempo_operacao)

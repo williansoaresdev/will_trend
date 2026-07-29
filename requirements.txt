@@ -2,3 +2,7 @@ numpy>=1.20
 scipy>=1.7
 yfinance>=0.2
 winotify>=1.1
+pandas>=2.0
+customtkinter>=5.0
+iqoptionapi>=6.0
+urllib3==1.26.6
