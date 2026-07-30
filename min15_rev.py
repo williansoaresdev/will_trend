@@ -241,9 +241,10 @@ while True:
                         with open("historico_15.txt", "a", encoding="utf-8") as arquivo_historico:
                             arquivo_historico.write("Gain\n")
 
-                        # Após 1 vitória no modo reversão, ele volta para o modo tendência:
+                        # Após 1 vitória no modo reversão, ele volta para o modo tendência no valor padrão:
                         if estrategia == "reversao":
                             estrategia = "tendencia"
+                            valor_operacao = entrada_padrao
                             print("Após uma vitória em reversão, retornando ao modo tendência.")
                         
                     # Processa derrotas
