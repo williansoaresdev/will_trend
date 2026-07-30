@@ -317,6 +317,9 @@ while True:
 
             candle_anterior_em_alta = candle_anterior > candle_antes_do_anterior
             candle_anterior_em_baixa = candle_anterior < candle_antes_do_anterior
+            
+            candle_atual_em_alta = historico[-1] > historico[-2]
+            candle_atual_em_baixa = historico[-1] < historico[-2]
 
             delta = abs(candle_anterior - preco_atual)
 
@@ -330,9 +333,9 @@ while True:
                     else:
                         direcao = "Indefinida"
                 else:
-                    if candle_anterior_em_alta:
+                    if candle_atual_em_alta:
                         direcao = "call"
-                    elif candle_anterior_em_baixa:
+                    elif candle_atual_em_baixa:
                         direcao = "put"
                     else:
                         direcao = "Indefinida"
