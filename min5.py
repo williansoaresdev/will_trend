@@ -46,7 +46,7 @@ def send_slack_notification(mensagem):
 print("*=================================================================*")
 print("|                                                                 |")
 print("|                                                                 |")
-print("| IQ OPTION - MEDIA MOVEL 5 TENDENCIA EM 15 MINUTOS               |")
+print("| IQ OPTION - EXPIRACAO 5 MINUTOS SEGUIR CANDLE ANTERIOR          |")
 print("|                                                 Willian Soares  |")
 print("|                                                                 |")
 print("*=================================================================*")
