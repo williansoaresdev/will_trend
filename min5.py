@@ -99,6 +99,7 @@ else:
     print(f"Saldo real: {saldo}")
 
 saldo_inicial = saldo
+saldo_maximo = saldo
 
 # Verifica ativo disponível
 ativo = "EURUSD-OTC"
@@ -129,8 +130,8 @@ max_gales = 5
 checa_profit = True
 
 # Stop Loss e Stop Gain
-stop_loss = saldo - (entrada_padrao * 25)
-stop_gain = saldo + (entrada_padrao * 10)
+stop_loss = saldo - (entrada_padrao * 45)
+stop_gain = saldo + (entrada_padrao * 5)
 
 # Tempo padrao de operacao
 tempo_operacao = 5
@@ -232,8 +233,9 @@ while True:
                         with open("historico_5.txt", "a", encoding="utf-8") as arquivo_historico:
                             arquivo_historico.write("Gain\n")
 
-                        if saldo > saldo_inicial:
-                            send_slack_notification(f"🎉 Saldo evoluiu de {saldo_inicial:.2f} para {saldo:.2f} 🍀")
+                        if saldo > saldo_maximo:
+                            saldo_maximo = saldo
+                            send_slack_notification(f"🎉 Saldo evoluiu de {saldo_inicial:.2f} para {saldo_maximo:.2f} 🍀")
 
                     # Processa derrotas
                     elif profit < 0:
@@ -291,8 +293,8 @@ while True:
             candle_atual_em_alta = historico[-1] > historico[-2]
             candle_atual_em_baixa = historico[-1] < historico[-2]
 
-            delta_minimo = 0.0006
-            delta_maximo = 0.0023
+            delta_minimo = 0.0002
+            delta_maximo = 0.02
             
             delta = abs(historico[-1] - historico[-2])
 
