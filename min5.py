@@ -131,7 +131,7 @@ checa_profit = True
 
 # Stop Loss e Stop Gain
 stop_loss = saldo - (entrada_padrao * 45)
-stop_gain = saldo + (entrada_padrao * 5)
+stop_gain = saldo + (entrada_padrao * 2)
 
 # Tempo padrao de operacao
 tempo_operacao = 5
@@ -293,8 +293,8 @@ while True:
             candle_atual_em_alta = historico[-1] > historico[-2]
             candle_atual_em_baixa = historico[-1] < historico[-2]
 
-            delta_minimo = 0.0002
-            delta_maximo = 0.02
+            delta_minimo = 0.0001
+            delta_maximo = 0.03
             
             delta = abs(historico[-1] - historico[-2])
 
