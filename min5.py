@@ -250,9 +250,9 @@ while True:
                         
                         print(f"## OPERAÇÃO PERDEDORA [{qtd_vitorias}x{qtd_derrotas}]")
 
-                        # Se é a primeira derrota, considera para os calculos de gale a entrada padrao
+                        # Se é a primeira derrota, considera para os calculos de gale a entrada padrao * 2
                         if qtd_vitorias_seguidas > 0:
-                            valor_operacao = entrada_padrao
+                            valor_operacao = entrada_padrao * 2
 
                         qtd_vitorias_seguidas = 0
                         
