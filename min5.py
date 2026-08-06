@@ -128,6 +128,7 @@ soma_percas = 0
 qtd_percas_seguidas = 0
 max_gales = 5
 checa_profit = True
+para_na_evolucao = False
 
 # Stop Loss e Stop Gain
 stop_loss = saldo - (entrada_padrao * 45)
@@ -216,6 +217,9 @@ while True:
 
                         print(f"## OPERAÇÃO VENCEDORA [{qtd_vitorias}x{qtd_derrotas}]")
 
+                        if qtd_vitorias_seguidas > 1:
+                            para_na_evolucao = True
+
                         # Se veio de uma derrota anterior (primeira vitoria), reinicia com a entrada padrao daqui pra frente
                         if qtd_percas_seguidas > 0:
                             valor_operacao = entrada_padrao
@@ -236,6 +240,9 @@ while True:
                         if saldo > saldo_maximo:
                             saldo_maximo = saldo
                             send_slack_notification(f"🎉 Saldo evoluiu de {saldo_inicial:.2f} para {saldo_maximo:.2f} 🍀")
+                            if para_na_evolucao:
+                                send_slack_notification("🛑 Estou parando aqui pois já chegamos na vitória do dia.")
+                                exit()
 
                     # Processa derrotas
                     elif profit < 0:
