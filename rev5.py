@@ -309,9 +309,9 @@ while True:
 
             if delta >= delta_minimo and delta <= delta_maximo:
                 if candle_atual_em_alta:
-                    direcao = "call"
-                elif candle_atual_em_baixa:
                     direcao = "put"
+                elif candle_atual_em_baixa:
+                    direcao = "call"
                 else:
                     direcao = "Indefinida"
 
