@@ -307,8 +307,8 @@ valor_operacao = entrada_padrao
 max_soro = entrada_padrao
 
 # Stop Loss e Stop Gain
-stop_loss = saldo - (entrada_padrao * 20)
-stop_gain = saldo + (entrada_padrao * 4)
+stop_loss = saldo - (entrada_padrao * 12)
+stop_gain = saldo + (entrada_padrao * 10)
 
 print("Monitorando:", ativo)
 
