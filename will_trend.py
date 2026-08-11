@@ -456,6 +456,8 @@ while True:
                 if qtd_operacoes > max_operacoes:
                     send_slack_notification(f"Encerrando aqui, {max_operacoes} entradas feitas. Tchau.")
                     exit()
+            else:
+                send_slack_notification("😐 Não gerou ordem de compra.")
 
         now = server_time
         seconds_until = calcular_segundos_ate_proximo_analise(now)
