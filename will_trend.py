@@ -29,12 +29,69 @@ import requests
 
 # Para números aleaórios
 import random
+import sys
+
+MOCK_MODE = "-mock" in sys.argv
+
+
+class MockIQOption:
+    def __init__(self):
+        self._balance = 1000.0
+        self._order_id = 1
+        self._last_buy_result = 0
+
+    def connect(self):
+        print("[MOCK] Conexão simulada com IQOption habilitada.")
+        return True, "mock"
+
+    def change_balance(self, conta):
+        print(f"[MOCK] Conta selecionada: {conta}")
+        return True
+
+    def get_balance(self):
+        return self._balance
+
+    def get_server_timestamp(self):
+        return int(time.time() * 1000)
+
+    def get_candles(self, ativo, timeframe, count, timestamp):
+        candles = []
+        ultimo = random.uniform(1.0001, 1.03)
+        for index in range(count):
+            direction = random.choice([-1, 1])
+            variacao = random.uniform(0.0001, 0.002)
+            ultimo = max(1.0001, min(1.03, ultimo + (direction * variacao)))
+            candles.append({
+                "close": round(ultimo, 5),
+                "from": int(timestamp) - (count - index) * timeframe,
+            })
+        return candles
+
+    def buy(self, valor, ativo, direcao, expiracao):
+        resultado = random.randint(1, 100) > 40
+        if resultado:
+            lucro = valor * 0.85
+            self._balance += lucro
+            self._last_buy_result = 1
+        else:
+            perda = valor
+            self._balance -= perda
+            self._last_buy_result = -1
+
+        self._order_id += 1
+        return True, self._order_id
+
+    def check_win_v3(self, order_id):
+        return self._last_buy_result
 
 
 # ---------------------- Funções ---------------------------- #
 
 
 def calcular_segundos_ate_proximo_analise(now):
+    if MOCK_MODE:
+        return 1
+
     intervalo = 5 * 60
     segundos_restantes = (intervalo - (now.minute % 5) * 60 - now.second) % intervalo
     if segundos_restantes == 0:
@@ -127,6 +184,7 @@ def espera_proximo_horario():
     global historico, tendencia, direcao
     global valor_operacao, comecando_dia, qtd_vitorias, qtd_vitorias_seguidas
     global qtd_derrotas, soma_percas, qtd_percas_seguidas
+    global MOCK_MODE
 
     # Define o tempo de espera
     candles_espera = random.randint(3, 5)
@@ -144,8 +202,10 @@ def espera_proximo_horario():
     soma_percas = 0
     qtd_percas_seguidas = 0
 
-    
-    time.sleep(candles_espera * 60)
+    if MOCK_MODE:
+        time.sleep(3)
+    else:
+        time.sleep(candles_espera * 60)
     
 
 def get_server_datetime():
@@ -167,6 +227,11 @@ def load_slack_webhook():
 
 
 def send_slack_notification(mensagem):
+    if MOCK_MODE:
+        time.sleep(1)
+        print(f"[MOCK] {mensagem}")
+        return
+
     print(mensagem)
 
     """Envia uma notificação para o Slack via webhook"""
@@ -223,7 +288,7 @@ qtd_operacoes = 0
 max_vitorias = 30
 max_derrotas = 30
 analisa_stop_qtd = False
-max_operacoes = 12
+max_operacoes = 60
 
 # Para controle das entradas
 check, order_id = False, 0
@@ -243,14 +308,19 @@ print("|                                       |")
 print("*=======================================*")
 
 
-# Pede a senha
-senha = getpass("Senha: ")
+if MOCK_MODE:
+    print("[MOCK] Modo de simulação habilitado. Nenhuma conexão real com a IQOption será feita.")
+    iq = MockIQOption()
+    ok, motivo = True, "mock"
+else:
+    # Pede a senha
+    senha = getpass("Senha: ")
 
-print(f"Logando na IQ como {LOGIN}")
+    print(f"Logando na IQ como {LOGIN}")
 
-iq = IQ_Option(LOGIN, senha)
+    iq = IQ_Option(LOGIN, senha)
 
-ok, motivo = iq.connect()
+    ok, motivo = iq.connect()
 
 # Se o login falhar:
 if not ok:
@@ -259,6 +329,10 @@ if not ok:
 
 
 while True:
+    if MOCK_MODE:
+        conta_selecionada = "PRACTICE"
+        break
+
     print("Escolha a conta:")
     print("1 - Conta de prática")
     print("2 - Conta Real")
@@ -291,15 +365,18 @@ saldo_inicial = saldo
 saldo_maximo = saldo
 
 # Valor padrao de operacao
-while True:
-    try:
-        entrada_padrao_texto = input("Digite o valor para entrada_padrao (entre 2 e 100): ").strip()
-        entrada_padrao = float(entrada_padrao_texto)
-        if 2 <= entrada_padrao <= 100:
-            break
-        print("Valor inválido. Informe um valor entre 2 e 100.")
-    except ValueError:
-        print("Valor inválido. Informe um valor numérico entre 2 e 100.")
+if MOCK_MODE:
+    entrada_padrao = 10.0
+else:
+    while True:
+        try:
+            entrada_padrao_texto = input("Digite o valor para entrada_padrao (entre 2 e 100): ").strip()
+            entrada_padrao = float(entrada_padrao_texto)
+            if 2 <= entrada_padrao <= 100:
+                break
+            print("Valor inválido. Informe um valor entre 2 e 100.")
+        except ValueError:
+            print("Valor inválido. Informe um valor numérico entre 2 e 100.")
 
 valor_operacao = entrada_padrao
 
@@ -448,16 +525,18 @@ while True:
                         send_slack_notification(mensagem)
                         exit()
 
-            check, order_id = iq.buy(valor_operacao, ativo, direcao, tempo_operacao)
-            if check:
-                operacao_aberta = True
-                qtd_operacoes += 1
-                print(f"Ordem inserida em {direcao}! ID: {order_id}")
-                if qtd_operacoes > max_operacoes:
-                    send_slack_notification(f"Encerrando aqui, {max_operacoes} entradas feitas. Tchau.")
-                    exit()
-            else:
-                send_slack_notification("😐 Não gerou ordem de compra.")
+            # Checa de novo pois pode ter sido alterado no espera_proximo_horario()
+            if direcao != "Indefinida":
+                check, order_id = iq.buy(valor_operacao, ativo, direcao, tempo_operacao)
+                if check:
+                    operacao_aberta = True
+                    qtd_operacoes += 1
+                    print(f"Ordem inserida em {direcao}! ID: {order_id}")
+                    if qtd_operacoes > max_operacoes:
+                        send_slack_notification(f"Encerrando aqui, {max_operacoes} entradas feitas. Tchau.")
+                        exit()
+                else:
+                    send_slack_notification("😐 Não gerou ordem de compra.")
 
         now = server_time
         seconds_until = calcular_segundos_ate_proximo_analise(now)
