@@ -429,7 +429,7 @@ while True:
             # Se ainda não definiu direção o faz agora:
             if direcao == "Indefinida":
                 direcao = define_direcao(historico)
-                send_slack_notification(f"📊 Novo candle: {fechamento:.5f}, direção assumida: {direcao}, padrão: {tendencia}")
+                print(f"📊 Novo candle: {fechamento:.5f}, direção assumida: {direcao}, padrão: {tendencia}")
 
         if len(historico) > 6:
             historico.pop(0)
