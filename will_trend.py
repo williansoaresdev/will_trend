@@ -385,7 +385,18 @@ max_soro = entrada_padrao
 
 # Stop Loss e Stop Gain
 stop_loss = saldo - (entrada_padrao * 12)
-stop_gain = saldo + (entrada_padrao * 1.5)
+
+while True:
+    try:
+        ganho_texto = input("Quanto deseja que seja seu ganho? (entre 2 e 100): ").strip()
+        ganho = float(ganho_texto)
+        if 2 <= ganho <= 100:
+            break
+        print("Valor inválido. Informe um valor entre 2 e 100.")
+    except ValueError:
+        print("Valor inválido. Informe um valor numérico entre 2 e 100.")
+
+stop_gain = saldo + ganho
 
 print("Monitorando:", ativo)
 
@@ -536,7 +547,8 @@ while True:
                         send_slack_notification(f"Encerrando aqui, {max_operacoes} entradas feitas. Tchau.")
                         exit()
                 else:
-                    send_slack_notification("😐 Não gerou ordem de compra.")
+                    send_slack_notification("😐 Não gerou ordem de compra, encerrando aqui.")
+                    exit()
 
         now = server_time
         seconds_until = calcular_segundos_ate_proximo_analise(now)
