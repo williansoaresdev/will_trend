@@ -104,20 +104,31 @@ def candles_em_tendencia_forte(historico):
         print("candles_em_tendencia_forte: Histórico insuficiente")
         return False
 
+    conta_baixas = 0
+    conta_altas = 0
     direcoes = []
     for i in range(len(historico) - 1, 0, -1):
         if historico[i] > historico[i - 1]:
             direcoes.append("alta")
+            conta_altas += 1
         elif historico[i] < historico[i - 1]:
             direcoes.append("baixa")
+            conta_baixas += 1
 
     sequencias = 0
     for i in range(1, len(direcoes)):
         if direcoes[i] == direcoes[i - 1]:
             sequencias += 1
+    
+    if conta_altas > conta_baixas:
+        ultima_tendencia_forte = "alta"
+    elif conta_baixas > conta_altas:
+        ultima_tendencia_forte = "baixa"
+    else:
+        ultima_tendencia_forte = ""
 
-    print(f"candles_em_tendencia_forte: {sequencias} sequencias em {len(historico)} candles.")
-    return sequencias >= 4
+    print(f"candles_em_tendencia_forte: {sequencias} seq em {len(historico)} candles {ultima_tendencia_forte}.")
+    return sequencias >= 5
 
 
 def candles_em_variacao(historico):
@@ -162,13 +173,15 @@ def define_direcao(historico):
         print("Candle fora do tamanho ideal.")
         return "Indefinida"
 
+    # Para tendencia, ele segue a tendencia, mesmo que o ultimo candle seja do sentido oposto
     if candles_em_tendencia_forte(historico):
         tendencia = "Tendência"
-        if candle_atual_em_alta:
+        if ultima_tendencia_forte == "alta":
             return "call"
-        elif candle_atual_em_baixa:
+        elif ultima_tendencia_forte == "baixa":
             return "put"
 
+    # Para reversão, aplica-se o sentido contrário do último candle
     if candles_em_variacao(historico):
         tendencia = "Reversão"
         if candle_atual_em_alta:
@@ -279,6 +292,7 @@ segundos_analise = 5 * 60
 # Direção da operação (call ou put)
 direcao = "Indefinida"
 tendencia = "Indefinida"
+ultima_tendencia_forte = ""
 
 # Conta as vitorias
 qtd_vitorias = 0
