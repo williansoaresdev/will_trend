@@ -31,72 +31,19 @@ import requests
 import random
 import sys
 
-MOCK_MODE = "-mock" in sys.argv
-
-
-class MockIQOption:
-    def __init__(self):
-        self._balance = 1000.0
-        self._order_id = 1
-        self._last_buy_result = 0
-
-    def connect(self):
-        print("[MOCK] Conexão simulada com IQOption habilitada.")
-        return True, "mock"
-
-    def change_balance(self, conta):
-        print(f"[MOCK] Conta selecionada: {conta}")
-        return True
-
-    def get_balance(self):
-        return self._balance
-
-    def get_server_timestamp(self):
-        return int(time.time() * 1000)
-
-    def get_candles(self, ativo, timeframe, count, timestamp):
-        candles = []
-        ultimo = random.uniform(1.0001, 1.03)
-        for index in range(count):
-            direction = random.choice([-1, 1])
-            variacao = random.uniform(0.0001, 0.002)
-            ultimo = max(1.0001, min(1.03, ultimo + (direction * variacao)))
-            candles.append({
-                "close": round(ultimo, 5),
-                "from": int(timestamp) - (count - index) * timeframe,
-            })
-        return candles
-
-    def buy(self, valor, ativo, direcao, expiracao):
-        resultado = random.randint(1, 100) > 40
-        if resultado:
-            lucro = valor * 0.85
-            self._balance += lucro
-            self._last_buy_result = 1
-        else:
-            perda = valor
-            self._balance -= perda
-            self._last_buy_result = -1
-
-        self._order_id += 1
-        return True, self._order_id
-
-    def check_win_v3(self, order_id):
-        return self._last_buy_result
+# Para automação pelo clique na tela
+from automacoes import existe_5minutos, clicar_no_elemento, entrada_call, entrada_put
 
 
 # ---------------------- Funções ---------------------------- #
 
 
 def calcular_segundos_ate_proximo_analise(now):
-    if MOCK_MODE:
-        return 1
-
-    intervalo = 5 * 60
+    intervalo = (5 * 60)
     segundos_restantes = (intervalo - (now.minute % 5) * 60 - now.second) % intervalo
     if segundos_restantes == 0:
         return intervalo
-    return segundos_restantes + 5
+    return segundos_restantes 
 
 
 def candles_em_tendencia_forte(historico):
@@ -197,10 +144,9 @@ def espera_proximo_horario():
     global historico, tendencia, direcao
     global valor_operacao, comecando_dia, qtd_vitorias, qtd_vitorias_seguidas
     global qtd_derrotas, soma_percas, qtd_percas_seguidas
-    global MOCK_MODE
 
     # Define o tempo de espera
-    candles_espera = random.randint(3, 5)
+    candles_espera = random.randint(1, 3)
     send_slack_notification(f"⌛ Vou esperar {candles_espera} candles para começar de novo.")
     
     # Reinicia os parametros de entrada
@@ -214,11 +160,9 @@ def espera_proximo_horario():
     qtd_derrotas = 0
     soma_percas = 0
     qtd_percas_seguidas = 0
+    operacao_aberta = False
 
-    if MOCK_MODE:
-        time.sleep(3)
-    else:
-        time.sleep(candles_espera * 60)
+    time.sleep(candles_espera * 60 * 5)
     
 
 def get_server_datetime():
@@ -240,11 +184,6 @@ def load_slack_webhook():
 
 
 def send_slack_notification(mensagem):
-    if MOCK_MODE:
-        time.sleep(1)
-        print(f"[MOCK] {mensagem}")
-        return
-
     print(mensagem)
 
     """Envia uma notificação para o Slack via webhook"""
@@ -322,46 +261,21 @@ print("|                                       |")
 print("*=======================================*")
 
 
-if MOCK_MODE:
-    print("[MOCK] Modo de simulação habilitado. Nenhuma conexão real com a IQOption será feita.")
-    iq = MockIQOption()
-    ok, motivo = True, "mock"
-else:
-    # Pede a senha
-    senha = getpass("Senha: ")
+# Pede a senha
+senha = getpass("Senha: ")
 
-    print(f"Logando na IQ como {LOGIN}")
+print(f"Logando na IQ como {LOGIN}")
 
-    iq = IQ_Option(LOGIN, senha)
+iq = IQ_Option(LOGIN, senha)
 
-    ok, motivo = iq.connect()
+ok, motivo = iq.connect()
 
 # Se o login falhar:
 if not ok:
     print("Erro:", motivo)
     exit()
 
-
-while True:
-    if MOCK_MODE:
-        conta_selecionada = "PRACTICE"
-        break
-
-    print("Escolha a conta:")
-    print("1 - Conta de prática")
-    print("2 - Conta Real")
-    opcao_conta = input("Opção: ").strip()
-
-    if opcao_conta == "1":
-        conta_selecionada = "PRACTICE"
-        print("Usando conta de prática...")
-        break
-    elif opcao_conta == "2":
-        conta_selecionada = "REAL"
-        print("Usando conta real...")
-        break
-    else:
-        print("Opção inválida. Digite 1 ou 2.")
+conta_selecionada = "PRACTICE"
 
 print(f"Login OK - alterando para a conta {conta_selecionada}...")
 
@@ -378,20 +292,7 @@ else:
 saldo_inicial = saldo
 saldo_maximo = saldo
 
-# Valor padrao de operacao
-if MOCK_MODE:
-    entrada_padrao = 10.0
-else:
-    while True:
-        try:
-            entrada_padrao_texto = input("Digite o valor para entrada_padrao (entre 2 e 100): ").strip()
-            entrada_padrao = float(entrada_padrao_texto)
-            if 2 <= entrada_padrao <= 100:
-                break
-            print("Valor inválido. Informe um valor entre 2 e 100.")
-        except ValueError:
-            print("Valor inválido. Informe um valor numérico entre 2 e 100.")
-
+entrada_padrao = 2
 valor_operacao = entrada_padrao
 
 # Maximo de Soro (valor de entrada) e Gales (quantidade de perdas consecutivas)
@@ -400,16 +301,7 @@ max_soro = entrada_padrao
 # Stop Loss e Stop Gain
 stop_loss = saldo - (entrada_padrao * 12)
 
-while True:
-    try:
-        ganho_texto = input("Quanto deseja que seja seu ganho? (entre 0.20 e 100): ").strip()
-        ganho = float(ganho_texto)
-        if 0.20 <= ganho <= 100:
-            break
-        print("Valor inválido. Informe um valor entre 2 e 100.")
-    except ValueError:
-        print("Valor inválido. Informe um valor numérico entre 2 e 100.")
-
+ganho = 2
 stop_gain = saldo + ganho
 
 print("Monitorando:", ativo)
@@ -462,107 +354,52 @@ while True:
         alerta_hora = server_time.strftime("%H:%M:%S")
         print(f"{alerta_hora} {fechamento:.5f}")
 
-        # Se tem uma direção a seguir e não for o primeiro loop:
+        # Checa de novo pois pode ter sido alterado no espera_proximo_horario()
         if direcao != "Indefinida":
-            if operacao_aberta:
-                saldo_anterior = saldo
-                saldo = iq.get_balance()
-
-                profit = round(saldo - saldo_anterior, 2)
-                
-                # Processa vitórias
-                if profit > 0:
-                    qtd_vitorias += 1
-                    qtd_vitorias_seguidas += 1
-
-                    print(f"🎉 OPERAÇÃO VENCEDORA [{qtd_vitorias}x{qtd_derrotas}]")
-
-                    # Se veio de uma derrota anterior (primeira vitoria), reinicia com a entrada padrao daqui pra frente
-                    if qtd_percas_seguidas > 0:
-                        valor_operacao = entrada_padrao
-
-                    valor_operacao = valor_operacao * round(1 + taxa_profit, 2)
-                    if valor_operacao > max_soro:
-                        valor_operacao = entrada_padrao
-                        print(f"Valor da operação atingiu o máximo de Soro ({max_soro}), reiniciando com entrada padrão {valor_operacao:.2f}.")
+            if existe_5minutos():
+                check = False
+                suspiro = True
+                if direcao == "call":
+                    time.sleep(10)
+                    novo_candle = iq.get_candles(
+                        ativo,
+                        300,
+                        1,
+                        get_server_datetime().timestamp()
+                    )[0]
+                    novo_fechamento = novo_candle["close"]
+                    if novo_fechamento < fechamento:
+                        check = entrada_call()
                     else:
-                        print(f"Valor da operação atualizado para {valor_operacao:.2f} após vitória.")
-
-                    soma_percas = 0
-                    qtd_percas_seguidas = 0
-
-                    with open("will_trend.txt", "a", encoding="utf-8") as arquivo_historico:
-                        arquivo_historico.write("Gain\n")
-
-                    if saldo > saldo_maximo:
-                        saldo_maximo = saldo
-                        send_slack_notification(f"🎉 Saldo evoluiu de {saldo_inicial:.2f} para {saldo_maximo:.2f} 🍀")
-                        if para_na_evolucao:
-                            send_slack_notification("🛑 Estou parando aqui pois já chegamos na vitória desse momento.")
-                            espera_proximo_horario()
-
-                # Processa derrotas
-                elif profit < 0:
-                    qtd_derrotas += 1
-                    
-                    print(f"😢 OPERAÇÃO PERDEDORA [{qtd_vitorias}x{qtd_derrotas}]")
-
-                    # Se é a primeira derrota, considera para os calculos de gale a entrada padrao * 1.2
-                    if qtd_derrotas == 1:
-                        valor_operacao = entrada_padrao * 1.2
-
-                    qtd_vitorias_seguidas = 0
-                    
-                    soma_percas += valor_operacao
-                    qtd_percas_seguidas += 1
-
-                    valor_operacao = round(soma_percas / taxa_profit, 2)
-                    
-                    if qtd_percas_seguidas > max_gales:
-                        valor_operacao = entrada_padrao
-                        print(f"Quantidade de perdas seguidas atingiu o máximo de Gales ({max_gales}), reiniciando com entrada padrão {valor_operacao:.2f}.")
-                        send_slack_notification(f"😥 Perdemos {qtd_percas_seguidas} vezes seguidas, foi mal, parando aqui.")
-                        espera_proximo_horario()
+                        suspiro = False
+                elif direcao == "put":
+                    time.sleep(10)
+                    novo_candle = iq.get_candles(
+                        ativo,
+                        300,
+                        1,
+                        get_server_datetime().timestamp()
+                    )[0]
+                    novo_fechamento = novo_candle["close"]
+                    if novo_fechamento > fechamento:
+                        check = entrada_put()
                     else:
-                        print(f"Valor da operação atualizado para {valor_operacao:.2f} após derrota.")
+                        suspiro = False
 
-                    with open("will_trend.txt", "a", encoding="utf-8") as arquivo_historico:
-                        arquivo_historico.write("Loss\n")
-
-                if saldo <= stop_loss:
-                    mensagem = f"## STOP LOSS ATINGIDO! Saldo ini {saldo_inicial:.2f} atual: {saldo:.2f}, Stop Loss: {stop_loss:.2f}"
-                    send_slack_notification(mensagem)
-                    exit()
-
-                if saldo >= stop_gain:
-                    mensagem = f"## STOP GAIN ATINGIDO! Saldo ini {saldo_inicial:.2f} atual: {saldo:.2f}, Stop Gain: {stop_gain:.2f}"
-                    send_slack_notification(mensagem)
-                    exit()
-
-                if analisa_stop_qtd:
-                    if qtd_derrotas >= max_derrotas:
-                        mensagem = f"## MAX PERDAS ATINGIDO! Saldo ini {saldo_inicial:.2f} atual: {saldo:.2f}"
-                        send_slack_notification(mensagem)
-                        exit()
-
-                    if qtd_vitorias >= max_vitorias:
-                        mensagem = f"## MAX VITORIAS ATINGIDO! Saldo ini {saldo_inicial:.2f} atual: {saldo:.2f}"
-                        send_slack_notification(mensagem)
-                        exit()
-
-            # Checa de novo pois pode ter sido alterado no espera_proximo_horario()
-            if direcao != "Indefinida":
-                check, order_id = iq.buy(valor_operacao, ativo, direcao, tempo_operacao)
                 if check:
-                    operacao_aberta = True
-                    qtd_operacoes += 1
-                    print(f"Ordem inserida em {direcao}! ID: {order_id}")
-                    if qtd_operacoes > max_operacoes:
-                        send_slack_notification(f"Encerrando aqui, {max_operacoes} entradas feitas. Tchau.")
-                        exit()
-                else:
-                    send_slack_notification("😐 Não gerou ordem de compra, encerrando aqui.")
+                    send_slack_notification("✅ Fiz uma entrada aqui, acompanhe ai pela tela por favor.")
+                    # espera_proximo_horario()
                     exit()
+                else:
+                    if suspiro:
+                        send_slack_notification("⏰ O preço não tem um suspiro, vamos aguardar mais um pouco.")
+                    else:
+                        send_slack_notification("😐 Não achei a imagem para dar entrada.")
+                    direcao = "Indefinida"
+            else:
+                send_slack_notification("😐 Não achei a indicação de 5 minutos.")
+                direcao = "Indefinida"
+
 
         now = server_time
         seconds_until = calcular_segundos_ate_proximo_analise(now)
